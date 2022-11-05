@@ -1,9 +1,18 @@
-type Quantity = Quantity of float
-type UnitCost = UnitCost of float
+type Quantity = Quantity of float*string
+type UnitCost = UnitCost of float*string
 
-/// Cost of BoQItem = (Quantity of Item * Material Unit Cost) + (Quantity of Item * Labor Unit Cost)
-let calcItemCost (Quantity qty) (UnitCost materialUnitCost) (UnitCost laborUnitCost) =  
-  qty * materialUnitCost + qty * laborUnitCost
+/// Calcuate cost of BoQItem
+let tryCalcItemCost (Quantity (qty,qtyUnit)) (UnitCost (materialUnitCost, materialUnit)) (UnitCost (laborUnitCost, laborUnit)) =  
+  if qtyUnit = materialUnit && qtyUnit = laborUnit then 
+    (qty * materialUnitCost + qty * laborUnitCost) |> Some
+  else
+    None
 
+///
+/// Test
+/// 
 let testCalcItemCost = 
-  (calcItemCost (Quantity 10) (UnitCost 100) (UnitCost 50)) = 1500
+  tryCalcItemCost (Quantity (10, "m^2")) (UnitCost (100, "m^2")) (UnitCost (50, "m^2")) = Some 1500
+
+let testCalcItemCostError = 
+  tryCalcItemCost (Quantity (10, "m^2")) (UnitCost (100, "m")) (UnitCost (50, "cm^2")) = None
