@@ -8,8 +8,7 @@ type UnitCost =
 type MaterialUnitCost = Material of UnitCost
 type LaborUnitCost = Labor of UnitCost
 
-type BoQItem =
-  {
+type BoQItem = private {
     Description : string
     Quantity : Quantity
     MaterialUnitCost : MaterialUnitCost
