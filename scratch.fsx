@@ -16,7 +16,7 @@ type BoQItem = private {
     TotalCost : float
   }
 module BoQItem =
-  let (*) qty (unitCost:UnitCost) =
+  let private calcCost qty (unitCost:UnitCost) =
     match qty, unitCost with
     | Quantity (qty, qtyUnit), {UnitCost = unitCost; Unit = unitCostUnit} 
       when qtyUnit = unitCostUnit ->
@@ -24,15 +24,9 @@ module BoQItem =
     | _ -> None
 
   let tryCalcItemCost qty (Material materialUnitCost) (Labor laborUnitCost) =  
-    match qty * materialUnitCost, qty * laborUnitCost with
+    match calcCost qty materialUnitCost, calcCost qty laborUnitCost with
     | Some materialCost, Some laborCost -> Some (materialCost + laborCost)
     | _ -> None
-
-  // let tryCalcItemCost (Quantity (qty,qtyUnit)) (Material materialUnitCost) (Labor laborUnitCost) =  
-  //   if qtyUnit = materialUnitCost.Unit && qtyUnit = laborUnitCost.Unit then 
-  //     (qty * materialUnitCost.UnitCost + qty * laborUnitCost.UnitCost) |> Some
-  //   else
-  //     None
 
   let tryCreate desc qty materialUnitCost laborUnitCost =
     tryCalcItemCost qty materialUnitCost laborUnitCost
