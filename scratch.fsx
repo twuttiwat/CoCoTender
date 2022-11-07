@@ -28,7 +28,7 @@ type BoQItem = private {
     TotalCost : float
   }
 module BoQItem =
-  let private calcCost qty (unitCost:UnitCost) =
+  let calcCost qty unitCost =
     match qty, unitCost with
     | Quantity (qty, qtyUnit), {UnitCost = unitCost; Unit = unitCostUnit} 
       when qtyUnit = unitCostUnit ->
@@ -40,18 +40,24 @@ module BoQItem =
     | Some materialCost, Some laborCost -> Some (materialCost + laborCost)
     | _ -> None
 
-  let tryCreate desc qty materialUnitCost laborUnitCost =
-    tryCalcItemCost qty materialUnitCost laborUnitCost
-    |> Option.map (fun cost -> 
-      {
-        Description = desc
-        Quantity = qty
-        MaterialUnitCost = materialUnitCost
-        LaborUnitCost = laborUnitCost
-        TotalCost = cost
-      })
+  let isValid desc qty materialUnitCost laborUnitCost =
+    match qty, materialUnitCost, laborUnitCost with
+    | Quantity (_, qtyUnit), Material {Unit = materialUnit}, Labor {Unit = laborUnit} ->
+      qtyUnit = materialUnit && qtyUnit = laborUnit  
 
-  // let value item = (item.Description, item.Quantity, item.MaterialUnitCost, item.LaborUnitCost, item.TotalCost ) 
+  let tryCreate desc qty materialUnitCost laborUnitCost = 
+    if isValid desc qty materialUnitCost laborUnitCost  then 
+      tryCalcItemCost qty materialUnitCost laborUnitCost
+      |> Option.map(fun cost -> {
+          Description = desc
+          Quantity = qty
+          MaterialUnitCost = materialUnitCost
+          LaborUnitCost = laborUnitCost
+          TotalCost = cost
+        })
+    else
+      None
+
   let value item = 
     {| 
       Description = item.Description
@@ -92,89 +98,50 @@ module BoQItem =
           TotalCost = cost
       })
 
-open BoQItem
+module Project =
 
-type DirectCost = DirectCost of float
-type FactorFTable = FactorFTable of (float*float) list
+  open BoQItem
 
-let calcDirectCost items = 
-  items 
-  |> List.sumBy (fun a -> a |> value |> (fun b -> b.TotalCost))
-  |> DirectCost
+  type DirectCost = DirectCost of float
+  type FactorFTable = FactorFTable of (float*float) list
 
-///
-/// Test
-///
+  let calcDirectCost items = 
+    items 
+    |> List.sumBy (fun a -> a |> value |> (fun b -> b.TotalCost))
+    |> DirectCost
 
-let testCalcDirectCost = 
-  (calcDirectCost []) = (DirectCost 0)
+  let calcFactorF (FactorFTable table) (DirectCost directCost) =
+    let calcUsingBound () =
+      let lowerBoundIndex = table |> List.findIndexBack (fun (costBound, _) -> directCost > costBound)
+      match (table |> List.item lowerBoundIndex), (table |> List.item (lowerBoundIndex + 1)) with
+      | (lowerBoundCost, lowerBoundF), (upperBoundCost, upperBoundF) ->
+        let ratio = (directCost - lowerBoundCost) / (upperBoundCost - lowerBoundCost)
+        ((upperBoundF - lowerBoundF) * ratio) + lowerBoundF
 
-let calcFactorF (FactorFTable table) (DirectCost directCost) =
-  let calcUsingBound () =
-    let lowerBoundIndex = table |> List.findIndexBack (fun (costBound, _) -> directCost > costBound)
-    match (table |> List.item lowerBoundIndex), (table |> List.item (lowerBoundIndex + 1)) with
-    | (lowerBoundCost, lowerBoundF), (upperBoundCost, upperBoundF) ->
-      let ratio = (directCost - lowerBoundCost) / (upperBoundCost - lowerBoundCost)
-      ((upperBoundF - lowerBoundF) * ratio) + lowerBoundF
+    let minDirectCost, minFactorF = table |> List.head 
+    let maxDirectCost, maxFactorF = table |> List.last 
+    if directCost < minDirectCost then minFactorF
+    else if directCost > maxDirectCost then maxFactorF
+    else calcUsingBound ()
 
-  let minDirectCost, minFactorF = table |> List.head 
-  let maxDirectCost, maxFactorF = table |> List.last 
-  if directCost < minDirectCost then minFactorF
-  else if directCost > maxDirectCost then maxFactorF
-  else calcUsingBound ()
-  
-let loadFactorFTableTest () =
-  FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
+  let applyFactorF loadFactorFTable (DirectCost directCost) =
+    let factorF = calcFactorF (loadFactorFTable()) (DirectCost directCost)
+    directCost * factorF
 
-///
-/// Test
-///  
+  // Strip value after thousands
+  let roundCost  = function 
+    | a when a < 1000.0 -> a
+    | b -> 
+      b / 1000.0  
+      |> System.Math.Truncate
+      |> (*) 1000.0
 
-let factorFTable1 = FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
-let testCalcFactorF directCost factorF = (=) (calcFactorF factorFTable1 (DirectCost directCost)) factorF
-let testCalcFactorFMin = testCalcFactorF 9 1.1
-let testCalcFactorFMax = testCalcFactorF 1001 1.9
-let testCalcFactorBound = testCalcFactorF 55 1.3
-
-
-let applyFactorF loadFactorFTable (DirectCost directCost) =
-  let factorF = calcFactorF (loadFactorFTable()) (DirectCost directCost)
-  directCost * factorF
+  let estimateCost loadFactorFTable = calcDirectCost >> (applyFactorF loadFactorFTable) >> roundCost 
 
 ///
-/// Test
-/// 
-
-let testApplyFactorF = (=) (applyFactorF loadFactorFTableTest (DirectCost 55)) (1.3 * 55.0)
-
-// Strip value after thousands
-let roundCost  = function 
-  | a when a < 1000.0 -> a
-  | b -> 
-    b / 1000.0  
-    |> System.Math.Truncate
-    |> (*) 1000.0
-
-let estimateCost items =
-  let applyFactorF' = applyFactorF loadFactorFTableTest
-  items
-  |> calcDirectCost
-  |> applyFactorF'
-  |> roundCost
-
-let applyFactorF' = applyFactorF loadFactorFTableTest
-let estimateCost' = calcDirectCost >> applyFactorF' >> roundCost 
-
-let testEstimateCost = 
-  match poolItem with
-  | Some poolItem' -> 
-    (=) (estimateCost' [poolItem']) 2000
-  | None -> false
-
+/// Tests
 ///
-/// Test
-/// 
-
+ 
 open BoQItem
 
 let poolItem =
@@ -186,15 +153,15 @@ let poolItem =
 let testCreateBoQItem =
   maybe {
     let! poolItem' = poolItem
-    return poolItem'.TotalCost = 1500
+    return (poolItem' |> BoQItem.value |> fun x -> x.TotalCost) = 1500
   }
   |> Option.defaultValue false
 
 let testUpdateDesc = 
   maybe {
     let! poolItem' = poolItem
-    let updatedPoolItem = updateDesc "New Pool" poolItem'
-    return updatedPoolItem.Description = "New Pool"
+    let updatedItem = poolItem' |> updateDesc "New Pool"
+    return (updatedItem |> BoQItem.value |> fun x -> x.Description) = "New Pool" 
   }
   |> Option.defaultValue false
 
@@ -203,7 +170,7 @@ let testUpdateQty =
     let! poolItem' = poolItem
     let newQty = Quantity (20,"m^2")
     let! updatedPoolItem = tryUpdateQty newQty poolItem'
-    return updatedPoolItem.TotalCost = 3000
+    return (updatedPoolItem |> BoQItem.value |> fun x -> x.TotalCost) = 3000
   }
   |> Option.defaultValue false
 
@@ -212,7 +179,7 @@ let testUpdateMaterialUnitCost =
     let! poolItem' = poolItem
     let newMaterialUnitCost = Material <| { Name = "Small Tile"; UnitCost = 50; Unit = "m^2"}
     let! updatedPoolItem = tryUpdateMaterialUnitCost newMaterialUnitCost poolItem'
-    return updatedPoolItem.TotalCost = 1000
+    return (updatedPoolItem |> BoQItem.value |> fun x -> x.TotalCost) = 1000
   }
   |> Option.defaultValue false
 
@@ -221,6 +188,23 @@ let testUpdateLaborUnitCost =
     let! poolItem' = poolItem
     let newLaborUnitCost = Labor <| { Name = "Do Tiling #2"; UnitCost = 100; Unit = "m^2"}
     let! updatedPoolItem = tryUpdateLaborUnitCost newLaborUnitCost poolItem'
-    return updatedPoolItem.TotalCost = 2000
+    return (updatedPoolItem |> BoQItem.value |> fun x -> x.TotalCost) = 2000
   }
   |> Option.defaultValue false
+
+open Project
+
+let testCalcDirectCost = (calcDirectCost []) = (DirectCost 0)
+let factorFTable1 = FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
+let loadFactorFTableTest () = factorFTable1 
+let testCalcFactorF directCost factorF = (=) (calcFactorF factorFTable1 (DirectCost directCost)) factorF
+let testCalcFactorFMin = testCalcFactorF 9 1.1
+let testCalcFactorFMax = testCalcFactorF 1001 1.9
+let testCalcFactorBound = testCalcFactorF 55 1.3
+let testApplyFactorF = (=) (applyFactorF loadFactorFTableTest (DirectCost 55)) (1.3 * 55.0)
+let testEstimateCost = 
+  match poolItem with
+  | Some poolItem' -> 
+    (=) (estimateCost loadFactorFTableTest [poolItem']) 2000
+  | None -> false
+
