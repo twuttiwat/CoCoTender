@@ -1,11 +1,11 @@
 type MaybeBuilder() =
 
-  member this.Bind(x, f) =
+  member _.Bind(x, f) =
     match x with
     | None -> None
     | Some a -> f a
 
-  member this.Return(x) =
+  member _.Return(x) =
     Some x
 
 let maybe = new MaybeBuilder()
@@ -51,6 +51,16 @@ module BoQItem =
         TotalCost = cost
       })
 
+  // let value item = (item.Description, item.Quantity, item.MaterialUnitCost, item.LaborUnitCost, item.TotalCost ) 
+  let value item = 
+    {| 
+      Description = item.Description
+      Quantity = item.Quantity
+      MaterialUnitCost = item.MaterialUnitCost
+      LaborUnitCost = item.LaborUnitCost
+      TotalCost = item.TotalCost
+    |}
+
   let updateDesc newDesc item = { item with Description = newDesc }
 
   let tryUpdateQty newQty item = 
@@ -81,6 +91,79 @@ module BoQItem =
           LaborUnitCost = newLaborUnitCost
           TotalCost = cost
       })
+
+open BoQItem
+
+type DirectCost = DirectCost of float
+type FactorFTable = FactorFTable of (float*float) list
+
+let calcDirectCost items = 
+  items 
+  |> List.sumBy (fun a -> a |> value |> (fun b -> b.TotalCost))
+  |> DirectCost
+
+///
+/// Test
+///
+
+let testCalcDirectCost = 
+  (calcDirectCost []) = (DirectCost 0)
+
+let calcFactorF (FactorFTable table) (DirectCost directCost) =
+  let calcUsingBound () =
+    let lowerBoundIndex = table |> List.findIndexBack (fun (costBound, _) -> directCost > costBound)
+    match (table |> List.item lowerBoundIndex), (table |> List.item (lowerBoundIndex + 1)) with
+    | (lowerBoundCost, lowerBoundF), (upperBoundCost, upperBoundF) ->
+      let ratio = (directCost - lowerBoundCost) / (upperBoundCost - lowerBoundCost)
+      ((upperBoundF - lowerBoundF) * ratio) + lowerBoundF
+
+  let minDirectCost, minFactorF = table |> List.head 
+  let maxDirectCost, maxFactorF = table |> List.last 
+  if directCost < minDirectCost then minFactorF
+  else if directCost > maxDirectCost then maxFactorF
+  else calcUsingBound ()
+  
+let loadFactorFTableTest () =
+  FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
+
+///
+/// Test
+///  
+
+let factorFTable1 = FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
+let testCalcFactorF directCost factorF = (=) (calcFactorF factorFTable1 (DirectCost directCost)) factorF
+let testCalcFactorFMin = testCalcFactorF 9 1.1
+let testCalcFactorFMax = testCalcFactorF 1001 1.9
+let testCalcFactorBound = testCalcFactorF 55 1.3
+
+
+let applyFactorF loadFactorFTable (DirectCost directCost) =
+  let factorF = calcFactorF (loadFactorFTable()) (DirectCost directCost)
+  directCost * factorF
+
+///
+/// Test
+/// 
+
+let testApplyFactorF = (=) (applyFactorF loadFactorFTableTest (DirectCost 55)) (1.3 * 55.0)
+
+let roundCost cost = cost
+
+let estimateCost items =
+  let applyFactorF' = applyFactorF loadFactorFTableTest
+  items
+  |> calcDirectCost
+  |> applyFactorF'
+  |> roundCost
+
+let applyFactorF' = applyFactorF loadFactorFTableTest
+let estimateCost' = calcDirectCost >> applyFactorF' >> roundCost 
+
+let testEstimateCost = 
+  match poolItem with
+  | Some poolItem' -> 
+    (=) (estimateCost' [poolItem']) 2850
+  | None -> false
 
 ///
 /// Test
