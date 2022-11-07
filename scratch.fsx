@@ -147,7 +147,13 @@ let applyFactorF loadFactorFTable (DirectCost directCost) =
 
 let testApplyFactorF = (=) (applyFactorF loadFactorFTableTest (DirectCost 55)) (1.3 * 55.0)
 
-let roundCost cost = cost
+// Strip value after thousands
+let roundCost  = function 
+  | a when a < 1000.0 -> a
+  | b -> 
+    b / 1000.0  
+    |> System.Math.Truncate
+    |> (*) 1000.0
 
 let estimateCost items =
   let applyFactorF' = applyFactorF loadFactorFTableTest
@@ -162,7 +168,7 @@ let estimateCost' = calcDirectCost >> applyFactorF' >> roundCost
 let testEstimateCost = 
   match poolItem with
   | Some poolItem' -> 
-    (=) (estimateCost' [poolItem']) 2850
+    (=) (estimateCost' [poolItem']) 2000
   | None -> false
 
 ///
