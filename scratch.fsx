@@ -195,6 +195,10 @@ let testUpdateLaborUnitCost =
 open Project
 
 let testCalcDirectCost = (calcDirectCost []) = (DirectCost 0)
+let testCalcDirectCost' = 
+  poolItem 
+  |> Option.map (fun poolItem' -> (=) (calcDirectCost [poolItem'; poolItem']) (DirectCost 3000))
+  |> Option.defaultValue false
 let factorFTable1 = FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
 let loadFactorFTableTest () = factorFTable1 
 let testCalcFactorF directCost factorF = (=) (calcFactorF factorFTable1 (DirectCost directCost)) factorF
