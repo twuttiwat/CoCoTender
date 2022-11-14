@@ -110,20 +110,31 @@ module Project =
     |> List.sumBy (fun a -> a |> value |> (fun b -> b.TotalCost))
     |> DirectCost
 
-  let calcFactorF (FactorFTable table) (DirectCost directCost) =
-    let calcUsingBound () =
-      let lowerBoundIndex = table |> List.findIndexBack (fun (costBound, _) -> directCost > costBound)
-      match (table |> List.item lowerBoundIndex), (table |> List.item (lowerBoundIndex + 1)) with
-      | (lowerBoundCost, lowerBoundF), (upperBoundCost, upperBoundF) ->
-        let ratio = (directCost - lowerBoundCost) / (upperBoundCost - lowerBoundCost)
-        ((upperBoundF - lowerBoundF) * ratio) + lowerBoundF
+  let calcBoundF  lowerBound upperBound directCost =
+    let lowerBoundCost,lowerBoundF = lowerBound
+    let upperBoundCost,upperBoundF = upperBound
+    let fRange = upperBoundF - lowerBoundF
+    let costRatio = (directCost - lowerBoundCost) / (upperBoundCost - lowerBoundCost)
+    costRatio * fRange + lowerBoundF
 
-    let minDirectCost, minFactorF = table |> List.head 
-    let maxDirectCost, maxFactorF = table |> List.last 
-    if directCost < minDirectCost then minFactorF
-    else if directCost > maxDirectCost then maxFactorF
-    else calcUsingBound ()
+  let calcFactorF (FactorFTable fTable) (DirectCost directCost) = 
+    let findBound() = 
+      let lowerBoundIndex = 
+        fTable 
+        |> List.findIndexBack (fun (cost,_) -> directCost > cost)
+      let upperBoundIndex = lowerBoundIndex + 1
+      (fTable |> List.item lowerBoundIndex), (fTable |> List.item upperBoundIndex)
 
+    let (minCost, minF), (maxCost, maxF) = (fTable |> List.head), (fTable |> List.last)
+    
+    if directCost < minCost then 
+      minF
+    else if directCost > maxCost then 
+      maxF
+    else 
+      let lowerBound, upperBound = findBound()
+      calcBoundF lowerBound upperBound directCost
+      
   let applyFactorF loadFactorFTable (DirectCost directCost) =
     let factorF = calcFactorF (loadFactorFTable()) (DirectCost directCost)
     directCost * factorF
@@ -201,7 +212,7 @@ let testCalcDirectCost' =
   |> Option.defaultValue false
 let factorFTable1 = FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
 let loadFactorFTableTest () = factorFTable1 
-let testCalcFactorF directCost factorF = (=) (calcFactorF factorFTable1 (DirectCost directCost)) factorF
+let testCalcFactorF directCost factorF = (=) (calcFactorF factorFTable1  (DirectCost directCost)) factorF
 let testCalcFactorFMin = testCalcFactorF 9 1.1
 let testCalcFactorFMax = testCalcFactorF 1001 1.9
 let testCalcFactorBound = testCalcFactorF 55 1.3
@@ -212,3 +223,11 @@ let testEstimateCost =
     (=) (estimateCost loadFactorFTableTest [poolItem']) 2000
   | None -> false
 
+let calcBoundF lowerBound upperBound directCost =
+  let lowerBoundCost,lowerBoundF = lowerBound
+  let upperBoundCost,upperBoundF = upperBound
+  let fRange = upperBoundF - lowerBoundF
+  let costRatio = (directCost - lowerBoundCost) / (upperBoundCost - lowerBoundCost)
+  costRatio * fRange + lowerBoundF
+
+let testCalcBoundF = (=) (calcBoundF (10.0,1.1) (100.0,1.5) 55.0) 1.3 
