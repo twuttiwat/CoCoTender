@@ -117,24 +117,23 @@ module Project =
     let costRatio = (directCost - lowerBoundCost) / (upperBoundCost - lowerBoundCost)
     costRatio * fRange + lowerBoundF
 
-  let calcFactorF (FactorFTable fTable) (DirectCost directCost) = 
-    let findBound() = 
-      let lowerBoundIndex = 
-        fTable 
-        |> List.findIndexBack (fun (cost,_) -> directCost > cost)
+  let (|LessThanMin|GreaterThanMax|BetweenRange|) input =
+    let (FactorFTable fTable),(DirectCost cost) = input
+    let minCost, minF = (fTable |> List.head)
+    let maxCost, maxF = (fTable |> List.last)
+    if cost < minCost then LessThanMin(minF)
+    else if cost > maxCost then GreaterThanMax(maxF)
+    else
+      let lowerBoundIndex = fTable |> List.findIndexBack (fun (cost',_) -> cost > cost')
       let upperBoundIndex = lowerBoundIndex + 1
-      (fTable |> List.item lowerBoundIndex), (fTable |> List.item upperBoundIndex)
+      BetweenRange(calcBoundF (List.item lowerBoundIndex fTable) (List.item upperBoundIndex fTable) cost)
 
-    let (minCost, minF), (maxCost, maxF) = (fTable |> List.head), (fTable |> List.last)
-    
-    if directCost < minCost then 
-      minF
-    else if directCost > maxCost then 
-      maxF
-    else 
-      let lowerBound, upperBound = findBound()
-      calcBoundF lowerBound upperBound directCost
-      
+  let calcFactorF fTable directCost =
+    match (fTable,directCost) with
+    | LessThanMin f -> f
+    | GreaterThanMax f -> f
+    | BetweenRange f -> f
+     
   let applyFactorF loadFactorFTable (DirectCost directCost) =
     let factorF = calcFactorF (loadFactorFTable()) (DirectCost directCost)
     directCost * factorF
@@ -231,3 +230,4 @@ let calcBoundF lowerBound upperBound directCost =
   costRatio * fRange + lowerBoundF
 
 let testCalcBoundF = (=) (calcBoundF (10.0,1.1) (100.0,1.5) 55.0) 1.3 
+
