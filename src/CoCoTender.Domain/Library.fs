@@ -62,3 +62,34 @@ module BoQItem =
       LaborUnitCost = item.LaborUnitCost
       TotalCost = item.TotalCost
     |}
+
+  let updateDesc newDesc item = { item with Description = newDesc }
+
+  let tryUpdateQty newQty item = 
+    tryCalcItemCost newQty item.MaterialUnitCost item.LaborUnitCost
+    |> Option.map (fun cost -> 
+      {
+        item with
+          Quantity = newQty
+          TotalCost = cost
+      })
+
+  let tryUpdateMaterialUnitCost (Material newUnitCost) item =
+    let newMaterialUnitCost = Material newUnitCost
+    tryCalcItemCost item.Quantity newMaterialUnitCost item.LaborUnitCost
+    |> Option.map (fun cost -> 
+      {
+        item with
+          MaterialUnitCost = newMaterialUnitCost
+          TotalCost = cost
+      })
+
+  let tryUpdateLaborUnitCost (Labor newUnitCost) item =
+    let newLaborUnitCost = Labor newUnitCost
+    tryCalcItemCost item.Quantity item.MaterialUnitCost newLaborUnitCost 
+    |> Option.map (fun cost -> 
+      {
+        item with
+          LaborUnitCost = newLaborUnitCost
+          TotalCost = cost
+      })

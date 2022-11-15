@@ -49,3 +49,31 @@ module ``Create boq item`` =
             itemVal.TotalCost |> should equal totalCost
         | None -> Assert.Fail "Could not create BoQItem"
 
+module ``Update boq item`` =
+
+    let desc = "Pool Item"
+    let qty = Quantity (10.0, "m^2")
+    let material = Material { Name = "Big Tile"; UnitCost = 100.0; Unit = "m^2" }
+    let labor = Labor { Name = "Do Tiling"; UnitCost = 50.0; Unit = "m^2" }
+ 
+    let item = 
+        match BoQItem.tryCreate desc qty material labor with
+        | Some item' -> item'
+        | _ -> failwith "Could not create item for updating"
+
+    let totalCost = item |> BoQItem.value |> fun x -> x.TotalCost
+
+    [<Fact>]
+    let ``with quantity should always re-calculate total cost`` () =
+        let result = item |> BoQItem.tryUpdateQty (Quantity (20, "m^2"))
+        match result with
+        | Some item' -> 
+            let itemVal' = item' |> BoQItem.value
+            itemVal'.TotalCost |> should equal (totalCost * 2.0)
+        | _ -> Assert.Fail "Could not update quantity" 
+
+    [<Fact>]
+    let ``with description should not update total cost`` () =
+        let result = item |> BoQItem.updateDesc "New Pool" 
+        let resultVal = result |> BoQItem.value
+        resultVal.TotalCost |> should equal totalCost
