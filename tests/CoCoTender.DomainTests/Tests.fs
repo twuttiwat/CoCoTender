@@ -16,6 +16,11 @@ let material = Material { Name = "Big Tile"; UnitCost = 100.0; Unit = "m^2" }
 let labor = Labor { Name = "Do Tiling"; UnitCost = 50.0; Unit = "m^2" }
 let totalCost = 10*100 + 10*50
 
+let item = 
+    match BoQItem.tryCreate desc qty material labor with
+    | Some item' -> item'
+    | _ -> failwith "Could not create item for updating"
+
 module ``Create boq item`` =
 
     [<Fact>]
@@ -50,11 +55,6 @@ module ``Create boq item`` =
         | None -> Assert.Fail "Could not create BoQItem"
 
 module ``Update boq item`` =
-
-    let item = 
-        match BoQItem.tryCreate desc qty material labor with
-        | Some item' -> item'
-        | _ -> failwith "Could not create item for updating"
 
     let totalCost = item |> BoQItem.value |> fun x -> x.TotalCost
 
@@ -94,3 +94,23 @@ module ``Calculate factor f`` =
         let result = calcFactorF fTable (DirectCost 55.0)
         result |> should equal 1.3 
 
+module ``Estimate construction cost`` =
+
+    open Project
+
+    let loadFactorFTableFn = 
+        function () -> FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
+
+    [<Fact>]
+    let ``should return correct result`` () =
+        let result = estimateCost loadFactorFTableFn [item] 
+        result |> should equal 2000
+
+    [<Fact>]
+    let ``should not round when less than one thousand`` () =
+        let smallPool = 
+            match item |> BoQItem.tryUpdateQty (Quantity (1.0, "m^2")) with
+            | Some item' -> item'
+            | _ -> failwith "Could not update quantity"
+        let result = estimateCost loadFactorFTableFn [smallPool] 
+        result |> should (equalWithin 0.11) 228.33
