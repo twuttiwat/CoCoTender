@@ -93,3 +93,53 @@ module BoQItem =
           LaborUnitCost = newLaborUnitCost
           TotalCost = cost
       })
+
+module Project =
+
+  open BoQItem
+
+  type DirectCost = DirectCost of float
+  type FactorFTable = FactorFTable of (float*float) list
+
+  let calcDirectCost items = 
+    items 
+    |> List.sumBy (fun a -> a |> value |> (fun b -> b.TotalCost))
+    |> DirectCost
+
+  let calcBoundF  lowerBound upperBound directCost =
+    let lowerBoundCost,lowerBoundF = lowerBound
+    let upperBoundCost,upperBoundF = upperBound
+    let fRange = upperBoundF - lowerBoundF
+    let costRatio = (directCost - lowerBoundCost) / (upperBoundCost - lowerBoundCost)
+    costRatio * fRange + lowerBoundF
+
+  let (|LessThanMin|GreaterThanMax|BetweenRange|) input =
+    let (FactorFTable fTable),(DirectCost cost) = input
+    let minCost, minF = (fTable |> List.head)
+    let maxCost, maxF = (fTable |> List.last)
+    if cost < minCost then LessThanMin(minF)
+    else if cost > maxCost then GreaterThanMax(maxF)
+    else
+      let lowerBoundIndex = fTable |> List.findIndexBack (fun (cost',_) -> cost > cost')
+      let upperBoundIndex = lowerBoundIndex + 1
+      BetweenRange(calcBoundF (List.item lowerBoundIndex fTable) (List.item upperBoundIndex fTable) cost)
+
+  let calcFactorF fTable directCost =
+    match (fTable,directCost) with
+    | LessThanMin f -> f
+    | GreaterThanMax f -> f
+    | BetweenRange f -> f
+     
+  let applyFactorF loadFactorFTable (DirectCost directCost) =
+    let factorF = calcFactorF (loadFactorFTable()) (DirectCost directCost)
+    directCost * factorF
+
+  // Strip value after thousands
+  let roundCost  = function 
+    | a when a < 1000.0 -> a
+    | b -> 
+      b / 1000.0  
+      |> System.Math.Truncate
+      |> (*) 1000.0
+
+  let estimateCost loadFactorFTable = calcDirectCost >> (applyFactorF loadFactorFTable) >> roundCost 

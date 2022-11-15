@@ -10,13 +10,13 @@ open CoCoTender.Domain
 let ``Hello test`` () =
     Say.hello "world" |> should equal "Hello, world"
 
-module ``Create boq item`` =
+let desc = "Pool Item"
+let qty = Quantity (10.0, "m^2")
+let material = Material { Name = "Big Tile"; UnitCost = 100.0; Unit = "m^2" }
+let labor = Labor { Name = "Do Tiling"; UnitCost = 50.0; Unit = "m^2" }
+let totalCost = 10*100 + 10*50
 
-    let desc = "Pool Item"
-    let qty = Quantity (10.0, "m^2")
-    let material = Material { Name = "Big Tile"; UnitCost = 100.0; Unit = "m^2" }
-    let labor = Labor { Name = "Do Tiling"; UnitCost = 50.0; Unit = "m^2" }
-    let totalCost = 10*100 + 10*50
+module ``Create boq item`` =
 
     [<Fact>]
     let ``should succeed if Quantity, Material and Labor use the same Unit`` () = 
@@ -51,11 +51,6 @@ module ``Create boq item`` =
 
 module ``Update boq item`` =
 
-    let desc = "Pool Item"
-    let qty = Quantity (10.0, "m^2")
-    let material = Material { Name = "Big Tile"; UnitCost = 100.0; Unit = "m^2" }
-    let labor = Labor { Name = "Do Tiling"; UnitCost = 50.0; Unit = "m^2" }
- 
     let item = 
         match BoQItem.tryCreate desc qty material labor with
         | Some item' -> item'
@@ -77,3 +72,25 @@ module ``Update boq item`` =
         let result = item |> BoQItem.updateDesc "New Pool" 
         let resultVal = result |> BoQItem.value
         resultVal.TotalCost |> should equal totalCost
+
+module ``Calculate factor f`` =
+
+    open Project
+
+    let fTable = FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
+
+    [<Fact>]
+    let ``should pick minimum factor f when cost exceed minimum cost`` () =
+        let result = calcFactorF fTable (DirectCost 9.0)
+        result |> should equal 1.1 
+
+    [<Fact>]
+    let ``should pick maximum factor f when cost exceed maximum cost`` () =
+        let result = calcFactorF fTable (DirectCost 1001.0)
+        result |> should equal 1.9 
+
+    [<Fact>]
+    let ``should calc factor f by range when cost is between any ranges`` () =
+        let result = calcFactorF fTable (DirectCost 55.0)
+        result |> should equal 1.3 
+
