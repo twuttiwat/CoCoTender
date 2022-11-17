@@ -6,10 +6,6 @@ open FsUnit
 open CoCoTender
 open CoCoTender.Domain
 
-[<Fact>]
-let ``Hello test`` () =
-    Say.hello "world" |> should equal "Hello, world"
-
 let desc = "Pool Item"
 let qty = Quantity (10.0, "m^2")
 let material = Material { Name = "Big Tile"; UnitCost = 100.0; Unit = "m^2" }
