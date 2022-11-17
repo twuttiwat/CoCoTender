@@ -120,7 +120,9 @@ module Project =
     if cost < minCost then LessThanMin(minF)
     else if cost > maxCost then GreaterThanMax(maxF)
     else
-      let lowerBoundIndex = fTable |> List.findIndexBack (fun (cost',_) -> cost > cost')
+      let lowerBoundIndex = 
+        printfn "lowerBoundIndex fTable %A cost %A" fTable cost 
+        fTable |> List.findIndexBack (fun (cost',_) -> cost > cost')
       let upperBoundIndex = lowerBoundIndex + 1
       BetweenRange(calcBoundF (List.item lowerBoundIndex fTable) (List.item upperBoundIndex fTable) cost)
 
