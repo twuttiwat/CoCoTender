@@ -13,4 +13,8 @@
     <ProjectReference Include="..\CoCoTender.Domain\CoCoTender.Domain.fsproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="FSharp.Data" Version="5.0.2" />
+  </ItemGroup>
+
 </Project>

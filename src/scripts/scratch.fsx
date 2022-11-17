@@ -88,4 +88,5 @@ match fsi.CommandLineArgs |> List.ofArray with
 | _ -> 
   printfn "Should not be here"
 
-__SOURCE_FILE__
+open System.IO
+Directory.GetCurrentDirectory()

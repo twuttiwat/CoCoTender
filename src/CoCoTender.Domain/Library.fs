@@ -1,10 +1,5 @@
 ﻿namespace CoCoTender.Domain
 
-module Say =
-    let hello name =
-        $"Hello, {name}"
-
-
 type Quantity = Quantity of float*string
 type UnitCost = 
   {
