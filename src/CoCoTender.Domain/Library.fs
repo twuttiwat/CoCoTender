@@ -1,5 +1,7 @@
 ﻿namespace CoCoTender.Domain
 
+open FsToolkit.ErrorHandling
+
 type Quantity = Quantity of float*string
 type UnitCost = 
   {
@@ -19,35 +21,41 @@ type BoQItem = private {
   }
 
 module BoQItem =
-  let calcCost qty unitCost =
-    match qty, unitCost with
-    | Quantity (qty, qtyUnit), {UnitCost = unitCost; Unit = unitCostUnit} 
-      when qtyUnit = unitCostUnit ->
-        (qty * unitCost) |> Some
-    | _ -> None
-
-  let tryCalcItemCost qty (Material materialUnitCost) (Labor laborUnitCost) =  
-    match calcCost qty materialUnitCost, calcCost qty laborUnitCost with
-    | Some materialCost, Some laborCost -> Some (materialCost + laborCost)
-    | _ -> None
-
-  let isValid desc qty materialUnitCost laborUnitCost =
+  
+  let areUnitsMatched  qty materialUnitCost laborUnitCost =
     match qty, materialUnitCost, laborUnitCost with
     | Quantity (_, qtyUnit), Material {Unit = materialUnit}, Labor {Unit = laborUnit} ->
-      qtyUnit = materialUnit && qtyUnit = laborUnit  
+      qtyUnit = materialUnit && qtyUnit = laborUnit
 
-  let tryCreate desc qty materialUnitCost laborUnitCost = 
-    if isValid desc qty materialUnitCost laborUnitCost  then 
-      tryCalcItemCost qty materialUnitCost laborUnitCost
-      |> Option.map(fun cost -> {
-          Description = desc
-          Quantity = qty
-          MaterialUnitCost = materialUnitCost
-          LaborUnitCost = laborUnitCost
-          TotalCost = cost
-        })
-    else
-      None
+  let recalcTotalCost item = 
+    let calcTotalCost() =
+      match item.Quantity, item.MaterialUnitCost, item.LaborUnitCost with
+      | Quantity (qty,_), Material {UnitCost = mUnitCost}, Labor {UnitCost = lbUnitCost} ->
+        (qty * mUnitCost) + (qty * lbUnitCost)
+      
+    result 
+      {
+        do! areUnitsMatched item.Quantity item.MaterialUnitCost item.LaborUnitCost |> Result.requireTrue "Unit are Not matched." 
+        return { item with TotalCost = calcTotalCost() }
+      }
+
+        
+  let create desc qty materialUnitCost laborUnitCost = result {
+    
+    do! areUnitsMatched qty materialUnitCost laborUnitCost |> Result.requireTrue "Unit are Not matched." 
+
+    let! item =  
+      {
+        Description = desc
+        Quantity = qty
+        MaterialUnitCost = materialUnitCost
+        LaborUnitCost = laborUnitCost
+        TotalCost = 0.0
+      } 
+      |> recalcTotalCost
+
+    return item      
+  }
 
   let value item = 
     {| 
@@ -58,36 +66,20 @@ module BoQItem =
       TotalCost = item.TotalCost
     |}
 
-  let updateDesc newDesc item = { item with Description = newDesc }
+  let updateDesc newDesc item = 
+    { item with Description = newDesc }
 
-  let tryUpdateQty newQty item = 
-    tryCalcItemCost newQty item.MaterialUnitCost item.LaborUnitCost
-    |> Option.map (fun cost -> 
-      {
-        item with
-          Quantity = newQty
-          TotalCost = cost
-      })
+  let updateQty newQty item =
+    { item with Quantity = newQty }
+    |> recalcTotalCost
 
-  let tryUpdateMaterialUnitCost (Material newUnitCost) item =
-    let newMaterialUnitCost = Material newUnitCost
-    tryCalcItemCost item.Quantity newMaterialUnitCost item.LaborUnitCost
-    |> Option.map (fun cost -> 
-      {
-        item with
-          MaterialUnitCost = newMaterialUnitCost
-          TotalCost = cost
-      })
+  let updateMaterialUnitCost newMaterialUnitCost item =
+    { item with MaterialUnitCost = newMaterialUnitCost }
+    |> recalcTotalCost
 
-  let tryUpdateLaborUnitCost (Labor newUnitCost) item =
-    let newLaborUnitCost = Labor newUnitCost
-    tryCalcItemCost item.Quantity item.MaterialUnitCost newLaborUnitCost 
-    |> Option.map (fun cost -> 
-      {
-        item with
-          LaborUnitCost = newLaborUnitCost
-          TotalCost = cost
-      })
+  let updateLaborUnitCost newLaborUnitCost item =
+    { item with LaborUnitCost = newLaborUnitCost }
+    |> recalcTotalCost
 
 module Project =
 
@@ -115,9 +107,7 @@ module Project =
     if cost < minCost then LessThanMin(minF)
     else if cost > maxCost then GreaterThanMax(maxF)
     else
-      let lowerBoundIndex = 
-        printfn "lowerBoundIndex fTable %A cost %A" fTable cost 
-        fTable |> List.findIndexBack (fun (cost',_) -> cost > cost')
+      let lowerBoundIndex = fTable |> List.findIndexBack (fun (cost',_) -> cost > cost')
       let upperBoundIndex = lowerBoundIndex + 1
       BetweenRange(calcBoundF (List.item lowerBoundIndex fTable) (List.item upperBoundIndex fTable) cost)
 
@@ -139,4 +129,9 @@ module Project =
       |> System.Math.Truncate
       |> (*) 1000.0
 
-  let estimateCost loadFactorFTable = calcDirectCost >> (applyFactorF loadFactorFTable) >> roundCost 
+  let estimateCost' loadFactorFTable = calcDirectCost >> (applyFactorF loadFactorFTable) >> roundCost 
+
+  let estimateCost loadFactorFTable items : Result<float,string> = 
+    let cost = estimateCost' loadFactorFTable items
+    Ok cost
+
