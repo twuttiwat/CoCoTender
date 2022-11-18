@@ -1,5 +1,6 @@
 ﻿open System.IO
 open FSharp.Data
+open FsToolkit.ErrorHandling
 open CoCoTender.Domain
 open BoQItem
 open Project
@@ -27,14 +28,18 @@ module BoQFile =
             }
             |> Labor
 
-        BoQItem.tryCreate row.Description qty material labor
+        BoQItem.create row.Description qty material labor
 
     let load (filePath:string) =
         BoQItems
             .Load(filePath)
             .Rows
-        |> Seq.choose toBoQItem 
+        |> Seq.map toBoQItem 
         |> List.ofSeq
+        |> List.sequenceResultA
+        |> function
+            | Ok items -> items
+            | Error msgs -> failwith $"{msgs}"
 
 module FactorFFile =
     type FactorFs = CsvProvider<"FactorF.csv", ResolutionFolder=ResolutionFolder>
@@ -47,20 +52,23 @@ module FactorFFile =
         |> List.ofSeq 
         |> FactorFTable
 
+let printCost cost =
+    cost 
+    |> Result.map (fun cost' -> printfn $"Estimate Cost is {cost'}") 
+    |> ignore
+
 [<EntryPoint>]
 let main args =
     printfn "%A" args
     match args |> List.ofArray with 
     | boqFile::factorFFile::_ -> 
         let cost = estimateCost (FactorFFile.load factorFFile) (BoQFile.load boqFile) 
-        printfn $"Estimate Cost is {cost}"
+        printCost cost 
     | [] -> 
         let boqFile = "boq.csv"
         let factorFFile =  "factorf.csv"
-        printfn "%s" boqFile
-        printfn "%s" factorFFile
-        let cost = estimateCost (FactorFFile.load factorFFile) (BoQFile.load boqFile) 
-        printfn $"Estimate Cost is {cost}"
+        let cost = estimateCost (FactorFFile.load factorFFile) (BoQFile.load boqFile)         
+        printCost cost
     | _ -> 
         printfn "Should not be here"
 
