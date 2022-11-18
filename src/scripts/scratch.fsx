@@ -28,54 +28,37 @@ module BoQItem =
         (qty * unitCost) |> Some
     | _ -> None
 
-  let tryCalcItemCost qty (Material materialUnitCost) (Labor laborUnitCost) =  
-    match calcCost qty materialUnitCost, calcCost qty laborUnitCost with
-    | Some materialCost, Some laborCost -> Some (materialCost + laborCost)
-    | _ -> None
-
   let calcItemCost qty (Material materialUnitCost) (Labor laborUnitCost) =  
     match calcCost qty materialUnitCost, calcCost qty laborUnitCost with
     | Some materialCost, Some laborCost -> Ok (materialCost + laborCost)
     | _ -> Error "Could not calculate item cost"
 
-  let isValid desc qty materialUnitCost laborUnitCost =
-    match qty, materialUnitCost, laborUnitCost with
-    | Quantity (_, qtyUnit), Material {Unit = materialUnit}, Labor {Unit = laborUnit} ->
-      qtyUnit = materialUnit && qtyUnit = laborUnit  
+  let recalcTotalCost item = result {
+    let! totalCost = calcItemCost item.Quantity item.MaterialUnitCost item.LaborUnitCost
+    return { item with TotalCost = totalCost }
+  }
 
   let areUnitsMatched  qty materialUnitCost laborUnitCost =
     match qty, materialUnitCost, laborUnitCost with
     | Quantity (_, qtyUnit), Material {Unit = materialUnit}, Labor {Unit = laborUnit} ->
       qtyUnit = materialUnit && qtyUnit = laborUnit
-
+        
   let create desc qty materialUnitCost laborUnitCost = result {
-     
+    
     do! areUnitsMatched qty materialUnitCost laborUnitCost |> Result.requireTrue "Unit are Not matched." 
 
-    let! itemCost =  calcItemCost qty materialUnitCost laborUnitCost
+    let! item =  
+      {
+        Description = desc
+        Quantity = qty
+        MaterialUnitCost = materialUnitCost
+        LaborUnitCost = laborUnitCost
+        TotalCost = 0.0
+      } 
+      |> recalcTotalCost
 
-    return {
-      Description = desc
-      Quantity = qty
-      MaterialUnitCost = materialUnitCost
-      LaborUnitCost = laborUnitCost
-      TotalCost = itemCost
-    }
+    return item      
   }
-
-
-  let tryCreate desc qty materialUnitCost laborUnitCost = 
-    if isValid desc qty materialUnitCost laborUnitCost  then 
-      tryCalcItemCost qty materialUnitCost laborUnitCost
-      |> Option.map(fun cost -> {
-          Description = desc
-          Quantity = qty
-          MaterialUnitCost = materialUnitCost
-          LaborUnitCost = laborUnitCost
-          TotalCost = cost
-        })
-    else
-      None
 
   let value item = 
     {| 
@@ -88,40 +71,6 @@ module BoQItem =
 
   let updateDesc newDesc item = 
     { item with Description = newDesc }
-
-  let tryUpdateQty newQty item = 
-    tryCalcItemCost newQty item.MaterialUnitCost item.LaborUnitCost
-    |> Option.map (fun cost -> 
-      {
-        item with
-          Quantity = newQty
-          TotalCost = cost
-      })
-
-  let tryUpdateMaterialUnitCost (Material newUnitCost) item =
-    let newMaterialUnitCost = Material newUnitCost
-    tryCalcItemCost item.Quantity newMaterialUnitCost item.LaborUnitCost
-    |> Option.map (fun cost -> 
-      {
-        item with
-          MaterialUnitCost = newMaterialUnitCost
-          TotalCost = cost
-      })
-
-  let tryUpdateLaborUnitCost (Labor newUnitCost) item =
-    let newLaborUnitCost = Labor newUnitCost
-    tryCalcItemCost item.Quantity item.MaterialUnitCost newLaborUnitCost 
-    |> Option.map (fun cost -> 
-      {
-        item with
-          LaborUnitCost = newLaborUnitCost
-          TotalCost = cost
-      })
-
-  let recalcTotalCost item = result {
-    let! totalCost = calcItemCost item.Quantity item.MaterialUnitCost item.LaborUnitCost
-    return { item with TotalCost = totalCost }
-  }
 
   let updateQty newQty item =
     { item with Quantity = newQty }
@@ -189,6 +138,9 @@ module Project =
     let cost = estimateCost' loadFactorFTable items
     Ok cost
 
+//    
+// TESTS
+// 
 open BoQItem
 open Project
 
