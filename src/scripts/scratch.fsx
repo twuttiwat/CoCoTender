@@ -86,7 +86,8 @@ module BoQItem =
       TotalCost = item.TotalCost
     |}
 
-  let updateDesc newDesc item = { item with Description = newDesc }
+  let updateDesc newDesc item = 
+    { item with Description = newDesc }
 
   let tryUpdateQty newQty item = 
     tryCalcItemCost newQty item.MaterialUnitCost item.LaborUnitCost
@@ -116,6 +117,23 @@ module BoQItem =
           LaborUnitCost = newLaborUnitCost
           TotalCost = cost
       })
+
+  let recalcTotalCost item = result {
+    let! totalCost = calcItemCost item.Quantity item.MaterialUnitCost item.LaborUnitCost
+    return { item with TotalCost = totalCost }
+  }
+
+  let updateQty newQty item =
+    { item with Quantity = newQty }
+    |> recalcTotalCost
+
+  let updateMaterialUnitCost newMaterialUnitCost item =
+    { item with MaterialUnitCost = newMaterialUnitCost }
+    |> recalcTotalCost
+
+  let updateLaborUnitCost newLaborUnitCost item =
+    { item with LaborUnitCost = newLaborUnitCost }
+    |> recalcTotalCost
 
 module Project =
 
@@ -178,14 +196,14 @@ let desc = "Pool Item"
 let qty = Quantity (10.0, "m^2")
 let material = Material { Name = "Big Tile"; UnitCost = 100.0; Unit = "m^2" }
 let labor = Labor { Name = "Do Tiling"; UnitCost = 50.0; Unit = "m^2" }
-let totalCost = 10*100 + 10*50
+let totalCost = 10.0*100.0 + 10.0*50.0
 
 let item = 
   match BoQItem.create desc qty material labor with
   | Ok item' -> item'
   | _ -> failwith "Could not create item for updating"
-
-let itemDiffUnits = 
+  
+let testItemDiffUnits = 
   let newMaterial, newLabor = 
     match material,labor with 
     | Material m, Labor lb ->  Material { m with Unit = "m"},  Labor {lb with Unit = "cm"}
@@ -193,6 +211,15 @@ let itemDiffUnits =
   match BoQItem.create desc qty newMaterial newLabor with
   | Ok item' -> false
   | Error msg -> printfn "%s" msg; true
+
+let testUpdateQty =
+  let (Quantity (qtyVal,qtyUnit)) = qty
+  let result = item |> updateQty (Quantity (qtyVal * 2.0, qtyUnit))
+  match result with 
+  | Ok item -> 
+    let (Quantity (newQtyVal,_)) = item.Quantity
+    newQtyVal = qtyVal * 2.0 && item.TotalCost = totalCost * 2.0
+  | _ -> false
 
 let loadFactorFTableFn = 
   function () -> FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
