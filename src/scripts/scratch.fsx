@@ -21,27 +21,24 @@ type BoQItem = private {
   }
 
 module BoQItem =
-  let calcCost qty unitCost =
-    match qty, unitCost with
-    | Quantity (qty, qtyUnit), {UnitCost = unitCost; Unit = unitCostUnit} 
-      when qtyUnit = unitCostUnit ->
-        (qty * unitCost) |> Some
-    | _ -> None
-
-  let calcItemCost qty (Material materialUnitCost) (Labor laborUnitCost) =  
-    match calcCost qty materialUnitCost, calcCost qty laborUnitCost with
-    | Some materialCost, Some laborCost -> Ok (materialCost + laborCost)
-    | _ -> Error "Could not calculate item cost"
-
-  let recalcTotalCost item = result {
-    let! totalCost = calcItemCost item.Quantity item.MaterialUnitCost item.LaborUnitCost
-    return { item with TotalCost = totalCost }
-  }
-
+  
   let areUnitsMatched  qty materialUnitCost laborUnitCost =
     match qty, materialUnitCost, laborUnitCost with
     | Quantity (_, qtyUnit), Material {Unit = materialUnit}, Labor {Unit = laborUnit} ->
       qtyUnit = materialUnit && qtyUnit = laborUnit
+
+  let recalcTotalCost item = 
+    let calcTotalCost() =
+      match item.Quantity, item.MaterialUnitCost, item.LaborUnitCost with
+      | Quantity (qty,_), Material {UnitCost = mUnitCost}, Labor {UnitCost = lbUnitCost} ->
+        (qty * mUnitCost) + (qty * lbUnitCost)
+      
+    result 
+      {
+        do! areUnitsMatched item.Quantity item.MaterialUnitCost item.LaborUnitCost |> Result.requireTrue "Unit are Not matched." 
+        return { item with TotalCost = calcTotalCost() }
+      }
+
         
   let create desc qty materialUnitCost laborUnitCost = result {
     
