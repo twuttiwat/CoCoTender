@@ -13,7 +13,7 @@ let labor = Labor { Name = "Do Tiling"; UnitCost = 50.0; Unit = "m^2" }
 let totalCost = 10*100 + 10*50
 
 let item = 
-    match BoQItem.create desc qty material labor with
+    match BoQItem.tryCreate desc qty material labor with
     | Ok item' -> item'
     | _ -> failwith "Could not create boq item"
 
@@ -21,7 +21,7 @@ module ``Create boq item`` =
 
     [<Fact>]
     let ``should succeed if Quantity, Material and Labor use the same Unit`` () = 
-        let result = BoQItem.create desc qty material labor
+        let result = BoQItem.tryCreate desc qty material labor
         match result with
         | Ok item -> 
             let itemVal = item |> BoQItem.value
@@ -36,14 +36,14 @@ module ``Create boq item`` =
         let material' = material |> fun (Material m) -> {m with Unit = "m"} |> Material
         let labor' = labor |> fun (Labor l) -> {l with Unit = "cm"} |> Labor
 
-        let result = BoQItem.create desc qty material' labor'
+        let result = BoQItem.tryCreate desc qty material' labor'
         match result with
         | Error _ -> Assert.True(true)
         | Ok item -> Assert.Fail "Should not create BoQItem with different Unit"        
 
     [<Fact>]
     let ``should always calculate total cost when create`` () = 
-        let result = BoQItem.create desc qty material labor
+        let result = BoQItem.tryCreate desc qty material labor
         match result with
         | Ok item -> 
             let itemVal = item |> BoQItem.value
@@ -56,7 +56,7 @@ module ``Update boq item`` =
 
     [<Fact>]
     let ``with quantity should always re-calculate total cost`` () =
-        let result = item |> BoQItem.updateQty (Quantity (20, "m^2"))
+        let result = item |> BoQItem.tryUpdateQty (Quantity (20, "m^2"))
         match result with
         | Ok item' -> 
             let itemVal' = item' |> BoQItem.value
@@ -99,7 +99,7 @@ module ``Estimate construction cost`` =
 
     [<Fact>]
     let ``should return correct result`` () =
-        let result = estimateCost loadFactorFTableFn [item] 
+        let result = tryEstimateCost loadFactorFTableFn [item] 
         match result with 
         | Ok estimatedCost -> estimatedCost |> should equal 2000
         | Error msg -> Assert.Fail msg
@@ -107,10 +107,10 @@ module ``Estimate construction cost`` =
     [<Fact>]
     let ``should not round when less than one thousand`` () =
         let smallPool = 
-            match item |> BoQItem.updateQty (Quantity (1.0, "m^2")) with
+            match item |> BoQItem.tryUpdateQty (Quantity (1.0, "m^2")) with
             | Ok item' -> item'
             | _ -> failwith "Could not update quantity for small pool"
-        let result = estimateCost loadFactorFTableFn [smallPool] 
+        let result = tryEstimateCost loadFactorFTableFn [smallPool] 
         match result with 
         | Ok estimatedCost -> estimatedCost |> should (equalWithin 0.11) 228.33
         | Error msg -> Assert.Fail msg

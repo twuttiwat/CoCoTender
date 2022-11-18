@@ -27,7 +27,7 @@ module BoQItem =
     | Quantity (_, qtyUnit), Material {Unit = materialUnit}, Labor {Unit = laborUnit} ->
       qtyUnit = materialUnit && qtyUnit = laborUnit
 
-  let recalcTotalCost item = 
+  let tryRecalcTotalCost item = 
     let calcTotalCost() =
       match item.Quantity, item.MaterialUnitCost, item.LaborUnitCost with
       | Quantity (qty,_), Material {UnitCost = mUnitCost}, Labor {UnitCost = lbUnitCost} ->
@@ -40,7 +40,7 @@ module BoQItem =
       }
 
         
-  let create desc qty materialUnitCost laborUnitCost = result {
+  let tryCreate desc qty materialUnitCost laborUnitCost = result {
     
     do! areUnitsMatched qty materialUnitCost laborUnitCost |> Result.requireTrue "Unit are Not matched." 
 
@@ -52,7 +52,7 @@ module BoQItem =
         LaborUnitCost = laborUnitCost
         TotalCost = 0.0
       } 
-      |> recalcTotalCost
+      |> tryRecalcTotalCost
 
     return item      
   }
@@ -69,17 +69,17 @@ module BoQItem =
   let updateDesc newDesc item = 
     { item with Description = newDesc }
 
-  let updateQty newQty item =
+  let tryUpdateQty newQty item =
     { item with Quantity = newQty }
-    |> recalcTotalCost
+    |> tryRecalcTotalCost
 
-  let updateMaterialUnitCost newMaterialUnitCost item =
+  let tryUpdateMaterialUnitCost newMaterialUnitCost item =
     { item with MaterialUnitCost = newMaterialUnitCost }
-    |> recalcTotalCost
+    |> tryRecalcTotalCost
 
-  let updateLaborUnitCost newLaborUnitCost item =
+  let tryUpdateLaborUnitCost newLaborUnitCost item =
     { item with LaborUnitCost = newLaborUnitCost }
-    |> recalcTotalCost
+    |> tryRecalcTotalCost
 
 module Project =
 
@@ -131,7 +131,7 @@ module Project =
 
   let estimateCost' loadFactorFTable = calcDirectCost >> (applyFactorF loadFactorFTable) >> roundCost 
 
-  let estimateCost loadFactorFTable items : Result<float,string> = 
+  let tryEstimateCost loadFactorFTable items : Result<float,string> = 
     let cost = estimateCost' loadFactorFTable items
     Ok cost
 

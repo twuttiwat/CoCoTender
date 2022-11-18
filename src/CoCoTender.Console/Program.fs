@@ -28,7 +28,7 @@ module BoQFile =
             }
             |> Labor
 
-        BoQItem.create row.Description qty material labor
+        BoQItem.tryCreate row.Description qty material labor
 
     let load (filePath:string) =
         BoQItems
@@ -62,12 +62,12 @@ let main args =
     printfn "%A" args
     match args |> List.ofArray with 
     | boqFile::factorFFile::_ -> 
-        let cost = estimateCost (FactorFFile.load factorFFile) (BoQFile.load boqFile) 
+        let cost = tryEstimateCost (FactorFFile.load factorFFile) (BoQFile.load boqFile) 
         printCost cost 
     | [] -> 
         let boqFile = "boq.csv"
         let factorFFile =  "factorf.csv"
-        let cost = estimateCost (FactorFFile.load factorFFile) (BoQFile.load boqFile)         
+        let cost = tryEstimateCost (FactorFFile.load factorFFile) (BoQFile.load boqFile)         
         printCost cost
     | _ -> 
         printfn "Should not be here"
