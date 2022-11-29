@@ -19,3 +19,19 @@ module Route =
 type ITodosApi =
     { getTodos: unit -> Async<Todo list>
       addTodo: Todo -> Async<Todo> }
+
+type BoQItemDto = {
+    Description : string
+    Quantity : float
+    Unit : string
+    Material : string
+    MaterialUnit : string
+    MaterialUnitCost : float
+    Labor : string
+    LaborUnit : string
+    LaborUnitCost : float
+    TotalCost : float
+}
+
+type ICoCoTenderApi =
+    { getBoQItems: unit -> Async<BoQItemDto list> }

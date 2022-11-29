@@ -4,37 +4,43 @@ open Elmish
 open Fable.Remoting.Client
 open Shared
 
-type Model = { Todos: Todo list; Input: string }
+//type Model = { Todos: Todo list; Input: string }
+type Model = { BoQItems: BoQItemDto list; Input: string }
 
 type Msg =
-    | GotTodos of Todo list
+    | GotBoQItems of BoQItemDto list
     | SetInput of string
-    | AddTodo
-    | AddedTodo of Todo
+    //| AddTodo
+    //| AddedTodo of Todo
 
 let todosApi =
     Remoting.createApi ()
     |> Remoting.withRouteBuilder Route.builder
     |> Remoting.buildProxy<ITodosApi>
 
-let init () : Model * Cmd<Msg> =
-    let model = { Todos = []; Input = "" }
+let cocoTenderApi =
+    Remoting.createApi ()
+    |> Remoting.withRouteBuilder Route.builder
+    |> Remoting.buildProxy<ICoCoTenderApi>
 
-    let cmd = Cmd.OfAsync.perform todosApi.getTodos () GotTodos
+let init () : Model * Cmd<Msg> =
+    let model = { BoQItems = []; Input = "" }
+
+    let cmd = Cmd.OfAsync.perform cocoTenderApi.getBoQItems () GotBoQItems
 
     model, cmd
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
-    | GotTodos todos -> { model with Todos = todos }, Cmd.none
+    | GotBoQItems items -> { model with BoQItems = items }, Cmd.none
     | SetInput value -> { model with Input = value }, Cmd.none
-    | AddTodo ->
-        let todo = Todo.create model.Input
+    // | AddTodo ->
+    //     let todo = Todo.create model.Input
 
-        let cmd = Cmd.OfAsync.perform todosApi.addTodo todo AddedTodo
+    //     let cmd = Cmd.OfAsync.perform todosApi.addTodo todo AddedTodo
 
-        { model with Input = "" }, cmd
-    | AddedTodo todo -> { model with Todos = model.Todos @ [ todo ] }, Cmd.none
+    //     { model with Input = "" }, cmd
+    // | AddedTodo todo -> { model with Todos = model.Todos @ [ todo ] }, Cmd.none
 
 open Feliz
 open Feliz.Bulma
@@ -57,8 +63,9 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
     Bulma.box [
         Bulma.content [
             Html.ol [
-                for todo in model.Todos do
-                    Html.li [ prop.text todo.Description ]
+                for boqItem in model.BoQItems do
+                    let itemText = $"{boqItem.Description} {boqItem.Quantity} {boqItem.Unit}"
+                    Html.li [ prop.text itemText ]
             ]
         ]
         Bulma.field.div [
@@ -78,7 +85,7 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                     Bulma.button.a [
                         color.isPrimary
                         prop.disabled (Todo.isValid model.Input |> not)
-                        prop.onClick (fun _ -> dispatch AddTodo)
+                        //prop.onClick (fun _ -> dispatch AddTodo)
                         prop.text "Add"
                     ]
                 ]

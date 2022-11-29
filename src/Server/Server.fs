@@ -34,10 +34,35 @@ let todosApi =
                     | Error e -> failwith e
             } }
 
+let cocoTenderApi =
+    {
+        getBoQItems = fun () -> async {
+            let item : BoQItemDto = {
+                Description = "Pool Tile"
+                Quantity = 10.0
+                Unit = "m^2"
+                Material = "Big Tile"
+                MaterialUnit = "m^2"
+                MaterialUnitCost = 100.0
+                Labor = "Do Tiling"
+                LaborUnit = "m^2"
+                LaborUnitCost = 50.0
+                TotalCost = 1500.0
+            }
+
+            return [
+                item
+                { item with Quantity = item.Quantity * 2.0 }
+                { item with Quantity = item.Quantity * 3.0 }
+            ]
+        }
+    }
+
 let webApp =
     Remoting.createApi ()
     |> Remoting.withRouteBuilder Route.builder
-    |> Remoting.fromValue todosApi
+    //|> Remoting.fromValue todosApi
+    |> Remoting.fromValue cocoTenderApi
     |> Remoting.buildHttpHandler
 
 let app =
