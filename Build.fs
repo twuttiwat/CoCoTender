@@ -12,6 +12,7 @@ let serverPath = Path.getFullName "src/Server"
 let clientPath = Path.getFullName "src/Client"
 let deployPath = Path.getFullName "deploy"
 let sharedTestsPath = Path.getFullName "tests/Shared"
+let domainTestsPath = Path.getFullName "tests/CoCoTender.DomainTests"
 let serverTestsPath = Path.getFullName "tests/Server"
 let clientTestsPath = Path.getFullName "tests/Client"
 
@@ -54,6 +55,7 @@ Target.create "Run" (fun _ ->
 
 Target.create "RunTests" (fun _ ->
     run dotnet "build" sharedTestsPath
+    run dotnet "test" domainTestsPath
     [ "server", dotnet "watch run" serverTestsPath
       "client", dotnet "fable watch -o output -s --run npm run test:live" clientTestsPath ]
     |> runParallel
