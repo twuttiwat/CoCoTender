@@ -38,8 +38,11 @@ module Storage =
     let boqItems = ResizeArray<BoQItemDto>()
 
     let addBoQItem (boqItem: BoQItemDto) =
-        boqItems.Add boqItem
-        Ok ()
+        if (BoQItemDto.isValid boqItem) then
+            boqItems.Add boqItem
+            Ok ()
+        else
+            Error "Invalid boq item"
 
     do
         let defaultItem =
@@ -52,6 +55,14 @@ module Storage =
 let cocoTenderApi =
     {
         getBoQItems = fun () -> async { return Storage.boqItems |> List.ofSeq }
+        addBoQItem =
+            fun boqItem ->
+                async {
+                    return
+                        match Storage.addBoQItem boqItem with
+                        | Ok () -> boqItem
+                        | Error e -> failwith e
+                }
     }
 
 let webApp =

@@ -12,10 +12,6 @@ module Todo =
         { Id = Guid.NewGuid()
           Description = description }
 
-module Route =
-    let builder typeName methodName =
-        sprintf "/api/%s/%s" typeName methodName
-
 type ITodosApi =
     { getTodos: unit -> Async<Todo list>
       addTodo: Todo -> Async<Todo> }
@@ -33,6 +29,9 @@ type BoQItemDto = {
 }
 
 module BoQItemDto =
+    let isValid item =
+        String.IsNullOrWhiteSpace item.Description |> not
+
     let create description quantity unit material materialUnitCost labor laborUnitCost totalCost =
         {
             Id = Guid.NewGuid()
@@ -47,4 +46,9 @@ module BoQItemDto =
         }
 
 type ICoCoTenderApi =
-    { getBoQItems: unit -> Async<BoQItemDto list> }
+    { getBoQItems: unit -> Async<BoQItemDto list>
+      addBoQItem: BoQItemDto -> Async<BoQItemDto> }
+
+module Route =
+    let builder typeName methodName =
+        sprintf "/api/%s/%s" typeName methodName

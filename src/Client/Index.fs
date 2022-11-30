@@ -10,8 +10,8 @@ type Model = { BoQItems: BoQItemDto list; Input: string }
 type Msg =
     | GotBoQItems of BoQItemDto list
     | SetInput of string
-    //| AddTodo
-    //| AddedTodo of Todo
+    | AddBoQItem
+    | AddedBoQItem of BoQItemDto
 
 let todosApi =
     Remoting.createApi ()
@@ -34,13 +34,14 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | GotBoQItems items -> { model with BoQItems = items }, Cmd.none
     | SetInput value -> { model with Input = value }, Cmd.none
-    // | AddTodo ->
-    //     let todo = Todo.create model.Input
+    | AddBoQItem ->
+        let boqItem = BoQItemDto.create model.Input 10.0 "m^2" "Pool Tile"
+                                        100.0 "Do Tiling" 50.0 1500.0
 
-    //     let cmd = Cmd.OfAsync.perform todosApi.addTodo todo AddedTodo
+        let cmd = Cmd.OfAsync.perform cocoTenderApi.addBoQItem boqItem AddedBoQItem
 
-    //     { model with Input = "" }, cmd
-    // | AddedTodo todo -> { model with Todos = model.Todos @ [ todo ] }, Cmd.none
+        { model with Input = "" }, cmd
+    | AddedBoQItem boqItem -> { model with BoQItems = model.BoQItems @ [ boqItem ] }, Cmd.none
 
 open Feliz
 open Feliz.Bulma
@@ -85,7 +86,7 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                     Bulma.button.a [
                         color.isPrimary
                         prop.disabled (Todo.isValid model.Input |> not)
-                        //prop.onClick (fun _ -> dispatch AddTodo)
+                        prop.onClick (fun _ -> dispatch AddBoQItem)
                         prop.text "Add"
                     ]
                 ]
