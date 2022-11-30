@@ -1,10 +1,10 @@
 module Index
 
+open System
 open Elmish
 open Fable.Remoting.Client
 open Shared
 
-//type Model = { Todos: Todo list; Input: string }
 type Model = { BoQItems: BoQItemDto list; Input: string }
 
 type Msg =
@@ -12,11 +12,6 @@ type Msg =
     | SetInput of string
     | AddBoQItem
     | AddedBoQItem of BoQItemDto
-
-let todosApi =
-    Remoting.createApi ()
-    |> Remoting.withRouteBuilder Route.builder
-    |> Remoting.buildProxy<ITodosApi>
 
 let cocoTenderApi =
     Remoting.createApi ()
@@ -85,7 +80,7 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                 Bulma.control.p [
                     Bulma.button.a [
                         color.isPrimary
-                        prop.disabled (Todo.isValid model.Input |> not)
+                        prop.disabled (String.IsNullOrWhiteSpace model.Input)
                         prop.onClick (fun _ -> dispatch AddBoQItem)
                         prop.text "Add"
                     ]
