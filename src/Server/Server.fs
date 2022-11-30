@@ -6,56 +6,52 @@ open Saturn
 
 open Shared
 
-module Storage =
-    let todos = ResizeArray()
+// module Storage =
+//     let todos = ResizeArray()
 
-    let addTodo (todo: Todo) =
-        if Todo.isValid todo.Description then
-            todos.Add todo
-            Ok()
-        else
-            Error "Invalid todo"
+//     let addTodo (todo: Todo) =
+//         if Todo.isValid todo.Description then
+//             todos.Add todo
+//             Ok()
+//         else
+//             Error "Invalid todo"
+
+//     do
+//         addTodo (Todo.create "Create new SAFE project")
+//         |> ignore
+
+//         addTodo (Todo.create "Write your app") |> ignore
+//         addTodo (Todo.create "Ship it !!!") |> ignore
+
+// let todosApi =
+//     { getTodos = fun () -> async { return Storage.todos |> List.ofSeq }
+//       addTodo =
+//         fun todo ->
+//             async {
+//                 return
+//                     match Storage.addTodo todo with
+//                     | Ok () -> todo
+//                     | Error e -> failwith e
+//             } }
+
+module Storage =
+    let boqItems = ResizeArray<BoQItemDto>()
+
+    let addBoQItem (boqItem: BoQItemDto) =
+        boqItems.Add boqItem
+        Ok ()
 
     do
-        addTodo (Todo.create "Create new SAFE project")
-        |> ignore
-
-        addTodo (Todo.create "Write your app") |> ignore
-        addTodo (Todo.create "Ship it !!!") |> ignore
-
-let todosApi =
-    { getTodos = fun () -> async { return Storage.todos |> List.ofSeq }
-      addTodo =
-        fun todo ->
-            async {
-                return
-                    match Storage.addTodo todo with
-                    | Ok () -> todo
-                    | Error e -> failwith e
-            } }
+        let defaultItem =
+            BoQItemDto.create "Pool Tile" 10.0 "m^2" "Big Tile" 100.0
+                            "Do Tiling" 50.0 1500.0
+        addBoQItem defaultItem |> ignore
+        addBoQItem { defaultItem with Quantity = 20.0 } |> ignore
+        addBoQItem { defaultItem with Quantity = 30.0 } |> ignore
 
 let cocoTenderApi =
     {
-        getBoQItems = fun () -> async {
-            let item : BoQItemDto = {
-                Description = "Pool Tile"
-                Quantity = 10.0
-                Unit = "m^2"
-                Material = "Big Tile"
-                MaterialUnit = "m^2"
-                MaterialUnitCost = 100.0
-                Labor = "Do Tiling"
-                LaborUnit = "m^2"
-                LaborUnitCost = 50.0
-                TotalCost = 1500.0
-            }
-
-            return [
-                item
-                { item with Quantity = item.Quantity * 2.0 }
-                { item with Quantity = item.Quantity * 3.0 }
-            ]
-        }
+        getBoQItems = fun () -> async { return Storage.boqItems |> List.ofSeq }
     }
 
 let webApp =

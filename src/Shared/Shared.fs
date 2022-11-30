@@ -21,17 +21,30 @@ type ITodosApi =
       addTodo: Todo -> Async<Todo> }
 
 type BoQItemDto = {
+    Id : Guid
     Description : string
     Quantity : float
     Unit : string
     Material : string
-    MaterialUnit : string
     MaterialUnitCost : float
     Labor : string
-    LaborUnit : string
     LaborUnitCost : float
     TotalCost : float
 }
+
+module BoQItemDto =
+    let create description quantity unit material materialUnitCost labor laborUnitCost totalCost =
+        {
+            Id = Guid.NewGuid()
+            Description = description
+            Quantity = quantity
+            Unit = unit
+            Material = material
+            MaterialUnitCost = materialUnitCost
+            Labor = labor
+            LaborUnitCost = laborUnitCost
+            TotalCost = totalCost
+        }
 
 type ICoCoTenderApi =
     { getBoQItems: unit -> Async<BoQItemDto list> }
