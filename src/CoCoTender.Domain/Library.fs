@@ -1,9 +1,10 @@
 ﻿namespace CoCoTender.Domain
 
+open System
 open FsToolkit.ErrorHandling
 
 type Quantity = Quantity of float*string
-type UnitCost = 
+type UnitCost =
   {
     Name : string
     UnitCost : float
@@ -21,44 +22,46 @@ type BoQItem = private {
   }
 
 module BoQItem =
-  
+
   let areUnitsMatched  qty materialUnitCost laborUnitCost =
     match qty, materialUnitCost, laborUnitCost with
     | Quantity (_, qtyUnit), Material {Unit = materialUnit}, Labor {Unit = laborUnit} ->
       qtyUnit = materialUnit && qtyUnit = laborUnit
 
-  let tryRecalcTotalCost item = 
+  let tryRecalcTotalCost item =
     let calcTotalCost() =
       match item.Quantity, item.MaterialUnitCost, item.LaborUnitCost with
       | Quantity (qty,_), Material {UnitCost = mUnitCost}, Labor {UnitCost = lbUnitCost} ->
         (qty * mUnitCost) + (qty * lbUnitCost)
-      
-    result 
+
+    result
       {
-        do! areUnitsMatched item.Quantity item.MaterialUnitCost item.LaborUnitCost |> Result.requireTrue "Unit are Not matched." 
+        do! areUnitsMatched item.Quantity item.MaterialUnitCost item.LaborUnitCost |> Result.requireTrue "Unit are Not matched."
         return { item with TotalCost = calcTotalCost() }
       }
 
-        
-  let tryCreate desc qty materialUnitCost laborUnitCost = result {
-    
-    do! areUnitsMatched qty materialUnitCost laborUnitCost |> Result.requireTrue "Unit are Not matched." 
 
-    let! item =  
+  let tryCreate desc qty materialUnitCost laborUnitCost = result {
+
+    do! (String.IsNullOrWhiteSpace desc |> not) |> Result.requireTrue "Description is required."
+
+    do! areUnitsMatched qty materialUnitCost laborUnitCost |> Result.requireTrue "Units are Not matched."
+
+    let! item =
       {
         Description = desc
         Quantity = qty
         MaterialUnitCost = materialUnitCost
         LaborUnitCost = laborUnitCost
         TotalCost = 0.0
-      } 
+      }
       |> tryRecalcTotalCost
 
-    return item      
+    return item
   }
 
-  let value item = 
-    {| 
+  let value item =
+    {|
       Description = item.Description
       Quantity = item.Quantity
       MaterialUnitCost = item.MaterialUnitCost
@@ -66,7 +69,7 @@ module BoQItem =
       TotalCost = item.TotalCost
     |}
 
-  let updateDesc newDesc item = 
+  let updateDesc newDesc item =
     { item with Description = newDesc }
 
   let tryUpdateQty newQty item =
@@ -88,8 +91,8 @@ module Project =
   type DirectCost = DirectCost of float
   type FactorFTable = FactorFTable of (float*float) list
 
-  let calcDirectCost items = 
-    items 
+  let calcDirectCost items =
+    items
     |> List.sumBy (fun a -> a |> value |> (fun b -> b.TotalCost))
     |> DirectCost
 
@@ -116,22 +119,22 @@ module Project =
     | LessThanMin f -> f
     | GreaterThanMax f -> f
     | BetweenRange f -> f
-     
+
   let applyFactorF loadFactorFTable (DirectCost directCost) =
     let factorF = calcFactorF (loadFactorFTable()) (DirectCost directCost)
     directCost * factorF
 
   // Strip value after thousands
-  let roundCost  = function 
+  let roundCost  = function
     | a when a < 1000.0 -> a
-    | b -> 
-      b / 1000.0  
+    | b ->
+      b / 1000.0
       |> System.Math.Truncate
       |> (*) 1000.0
 
-  let estimateCost' loadFactorFTable = calcDirectCost >> (applyFactorF loadFactorFTable) >> roundCost 
+  let estimateCost' loadFactorFTable = calcDirectCost >> (applyFactorF loadFactorFTable) >> roundCost
 
-  let tryEstimateCost loadFactorFTable items : Result<float,string> = 
+  let tryEstimateCost loadFactorFTable items : Result<float,string> =
     let cost = estimateCost' loadFactorFTable items
     Ok cost
 

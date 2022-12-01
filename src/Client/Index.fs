@@ -78,7 +78,7 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                     ]
                 ]
                 Bulma.control.p [
-                    Bulma.button.a [
+                    Bulma.button.button [
                         color.isPrimary
                         prop.disabled (String.IsNullOrWhiteSpace model.Input)
                         prop.onClick (fun _ -> dispatch AddBoQItem)
