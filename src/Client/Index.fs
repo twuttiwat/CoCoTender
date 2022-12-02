@@ -18,6 +18,10 @@ let cocoTenderApi =
     |> Remoting.withRouteBuilder Route.builder
     |> Remoting.buildProxy<ICoCoTenderApi>
 
+let defaultNewItem =
+    BoQItemDto.create "New Item" 0.0 "m" "Material 1"
+        0.0 "Labor 1" 0.0 0.0
+
 let init () : Model * Cmd<Msg> =
     let model = { BoQItems = []; Input = "" }
 
@@ -30,10 +34,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | GotBoQItems items -> { model with BoQItems = items }, Cmd.none
     | SetInput value -> { model with Input = value }, Cmd.none
     | AddBoQItem ->
-        let boqItem = BoQItemDto.create model.Input 10.0 "m^2" "Pool Tile"
-                                        100.0 "Do Tiling" 50.0 1500.0
-
-        let cmd = Cmd.OfAsync.perform cocoTenderApi.addBoQItem boqItem AddedBoQItem
+        let cmd = Cmd.OfAsync.perform cocoTenderApi.addBoQItem defaultNewItem AddedBoQItem
 
         { model with Input = "" }, cmd
     | AddedBoQItem boqItem -> { model with BoQItems = model.BoQItems @ [ boqItem ] }, Cmd.none
@@ -61,6 +62,11 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
     Html.div [
         prop.className ThemeClass.Balham
         prop.children [
+            Bulma.button.button [
+                color.isPrimary
+                prop.onClick (fun _ -> dispatch AddBoQItem)
+                prop.text "Add"
+            ]
             AgGrid.grid [
                 AgGrid.rowData (model.BoQItems |> Array.ofList)
                 AgGrid.defaultColDef [
