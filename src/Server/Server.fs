@@ -4,6 +4,7 @@ open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open Saturn
 
+open System
 open Shared
 open CoCoTender.Domain
 
@@ -14,15 +15,18 @@ module Storage =
         boqItems.Add boqItem
         Ok ()
 
+    let updateBoQItem boqItem =
+        let index = boqItems.FindIndex( fun x -> x = boqItem)
+        boqItems[index] <- boqItem
+        Ok ()
+
     do
         let qty = Quantity (10.0, "m^2")
         let material = Material { Name = "Pool Tile"; Unit = "m^2"; UnitCost = 100.0 }
         let labor = Labor { Name = "Do Tiling"; Unit = "m^2"; UnitCost = 50.0 }
-        let defaultItem = BoQItem.tryCreate "Pool Tile" qty material labor
+        let defaultItem = BoQItem.tryCreate (Guid.NewGuid()) "Pool Tile" qty material labor
         match defaultItem with
         | Ok defaultItem' ->
-            addBoQItem defaultItem' |> ignore
-            addBoQItem defaultItem' |> ignore
             addBoQItem defaultItem' |> ignore
         | _ -> ()
 
@@ -32,7 +36,7 @@ module Dto =
         let (Quantity (qty, qtyUnit)) = domainVal.Quantity
         let (Material material) = domainVal.MaterialUnitCost
         let (Labor labor) = domainVal.LaborUnitCost
-        BoQItemDto.create domainVal.Description qty qtyUnit
+        BoQItemDto.create domainVal.Id domainVal.Description qty qtyUnit
                           material.Name material.UnitCost labor.Name labor.UnitCost
                           domainVal.TotalCost
 
@@ -40,7 +44,7 @@ module Dto =
         let qty = Quantity (dto.Quantity, dto.Unit)
         let material = Material { Name = dto.Material; Unit = dto.Unit; UnitCost = dto.MaterialUnitCost }
         let labor = Labor { Name = dto.Labor; Unit = dto.Unit; UnitCost = dto.LaborUnitCost }
-        BoQItem.tryCreate dto.Description qty material labor
+        BoQItem.tryCreate dto.Id dto.Description qty material labor
 
 let cocoTenderApi =
     {
@@ -53,6 +57,20 @@ let cocoTenderApi =
                         | Ok boqItem ->
                             match Storage.addBoQItem boqItem with
                             | Ok () -> boqItemDto
+                            | Error e -> failwith e
+                        | Error e -> failwith e
+                }
+        updateBoQItem =
+            fun boqItemDto ->
+                async {
+                    return
+                        match  boqItemDto |> Dto.toBoQItemDomain with
+                        | Ok boqItem ->
+                            match boqItem |> BoQItem.tryUpdate with
+                            | Ok updatedBoQItem ->
+                                match Storage.updateBoQItem updatedBoQItem with
+                                | Ok () -> updatedBoQItem |> Dto.toBoQItemDto
+                                | Error e -> failwith e
                             | Error e -> failwith e
                         | Error e -> failwith e
                 }

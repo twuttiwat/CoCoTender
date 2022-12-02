@@ -18,9 +18,9 @@ module BoQItemDto =
     let isValid item =
         String.IsNullOrWhiteSpace item.Description |> not
 
-    let create description quantity unit material materialUnitCost labor laborUnitCost totalCost =
+    let create itemId description quantity unit material materialUnitCost labor laborUnitCost totalCost =
         {
-            Id = Guid.NewGuid()
+            Id = itemId
             Description = description
             Quantity = quantity
             Unit = unit
@@ -33,7 +33,8 @@ module BoQItemDto =
 
 type ICoCoTenderApi =
     { getBoQItems: unit -> Async<BoQItemDto list>
-      addBoQItem: BoQItemDto -> Async<BoQItemDto> }
+      addBoQItem: BoQItemDto -> Async<BoQItemDto>
+      updateBoQItem: BoQItemDto -> Async<BoQItemDto> }
 
 module Route =
     let builder typeName methodName =

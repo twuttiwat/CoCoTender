@@ -13,13 +13,22 @@ type UnitCost =
 type MaterialUnitCost = Material of UnitCost
 type LaborUnitCost = Labor of UnitCost
 
+[<CustomEquality; NoComparison>]
 type BoQItem = private {
+    Id : Guid
     Description : string
     Quantity : Quantity
     MaterialUnitCost : MaterialUnitCost
     LaborUnitCost : LaborUnitCost
     TotalCost : float
   }
+  with
+  override this.Equals(obj) =
+    match obj with
+    | :? BoQItem as item -> this.Id = item.Id
+    | _ -> false
+  override this.GetHashCode () =
+    hash this.Id
 
 module BoQItem =
 
@@ -41,7 +50,7 @@ module BoQItem =
       }
 
 
-  let tryCreate desc qty materialUnitCost laborUnitCost = result {
+  let tryCreate newId desc qty materialUnitCost laborUnitCost = result {
 
     do! (String.IsNullOrWhiteSpace desc |> not) |> Result.requireTrue "Description is required."
 
@@ -49,6 +58,7 @@ module BoQItem =
 
     let! item =
       {
+        Id = newId
         Description = desc
         Quantity = qty
         MaterialUnitCost = materialUnitCost
@@ -62,6 +72,7 @@ module BoQItem =
 
   let value item =
     {|
+      Id = item.Id
       Description = item.Description
       Quantity = item.Quantity
       MaterialUnitCost = item.MaterialUnitCost
@@ -83,6 +94,8 @@ module BoQItem =
   let tryUpdateLaborUnitCost newLaborUnitCost item =
     { item with LaborUnitCost = newLaborUnitCost }
     |> tryRecalcTotalCost
+
+  let tryUpdate boqItem =  boqItem |> tryRecalcTotalCost
 
 module Project =
 

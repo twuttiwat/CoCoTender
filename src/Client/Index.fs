@@ -12,6 +12,8 @@ type Msg =
     | SetInput of string
     | AddBoQItem
     | AddedBoQItem of BoQItemDto
+    | UpdateBoQItem of BoQItemDto
+    | UpdatedBoQItem of BoQItemDto
 
 let cocoTenderApi =
     Remoting.createApi ()
@@ -19,7 +21,7 @@ let cocoTenderApi =
     |> Remoting.buildProxy<ICoCoTenderApi>
 
 let defaultNewItem =
-    BoQItemDto.create "New Item" 0.0 "m" "Material 1"
+    BoQItemDto.create (Guid.NewGuid()) "New Item" 0.0 "m" "Material 1"
         0.0 "Labor 1" 0.0 0.0
 
 let init () : Model * Cmd<Msg> =
@@ -29,6 +31,8 @@ let init () : Model * Cmd<Msg> =
 
     model, cmd
 
+// open Fable.Core.JS
+
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | GotBoQItems items -> { model with BoQItems = items }, Cmd.none
@@ -36,8 +40,16 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | AddBoQItem ->
         let cmd = Cmd.OfAsync.perform cocoTenderApi.addBoQItem defaultNewItem AddedBoQItem
 
-        { model with Input = "" }, cmd
+        model, cmd
     | AddedBoQItem boqItem -> { model with BoQItems = model.BoQItems @ [ boqItem ] }, Cmd.none
+    | UpdateBoQItem boqItem ->
+        printfn "UpdateBoQItem %A" boqItem
+        let cmd = Cmd.OfAsync.perform cocoTenderApi.updateBoQItem boqItem UpdatedBoQItem
+
+        model, cmd
+    | UpdatedBoQItem updatedItem ->
+        let updatedItems = model.BoQItems |> List.map (fun x -> if x.Id = updatedItem.Id then updatedItem else x)
+        { model with BoQItems = updatedItems }, Cmd.none
 
 open Feliz
 open Feliz.Bulma
@@ -80,35 +92,49 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                     ColumnDef.create<string> [
                         ColumnDef.headerName "Description"
                         ColumnDef.valueGetter (fun x -> x.Description)
+                        ColumnDef.valueSetter (fun newValue _ row  -> { row with Description = newValue } |> UpdateBoQItem |> dispatch)
+                        ColumnDef.editable (fun _ _ -> true)
                     ]
                     ColumnDef.create<float> [
                         ColumnDef.headerName "Quantity"
                         ColumnDef.valueGetter (fun x -> x.Quantity)
+                        ColumnDef.valueSetter (fun newValue _ row  -> { row with Quantity = newValue |> float  } |> UpdateBoQItem |> dispatch)
+                        ColumnDef.editable (fun _ _ -> true)
                         ColumnDef.width 75
                     ]
                     ColumnDef.create<string> [
                         ColumnDef.headerName "Unit"
                         ColumnDef.valueGetter (fun x -> x.Unit)
+                        ColumnDef.valueSetter (fun newValue _ row  -> { row with Description = newValue } |> UpdateBoQItem |> dispatch)
+                        ColumnDef.editable (fun _ _ -> true)
                         ColumnDef.width 50
                     ]
                     ColumnDef.create<string> [
                         ColumnDef.headerName "Material"
                         ColumnDef.valueGetter (fun x -> x.Material)
+                        ColumnDef.valueSetter (fun newValue _ row  -> { row with Material = newValue } |> UpdateBoQItem |> dispatch)
+                        ColumnDef.editable (fun _ _ -> true)
                         ColumnDef.width 150
                     ]
                     ColumnDef.create<float> [
                         ColumnDef.headerName "M. UnitCost"
                         ColumnDef.valueGetter (fun x -> x.MaterialUnitCost)
+                        ColumnDef.valueSetter (fun newValue _ row  -> { row with MaterialUnitCost = newValue |> float  } |> UpdateBoQItem |> dispatch)
+                        ColumnDef.editable (fun _ _ -> true)
                         ColumnDef.width 75
                     ]
                     ColumnDef.create<string> [
                         ColumnDef.headerName "Labor"
                         ColumnDef.valueGetter (fun x -> x.Labor)
+                        ColumnDef.valueSetter (fun newValue _ row  -> { row with Labor = newValue } |> UpdateBoQItem |> dispatch)
+                        ColumnDef.editable (fun _ _ -> true)
                         ColumnDef.width 150
                     ]
                     ColumnDef.create<float> [
                         ColumnDef.headerName "L. UnitCost"
                         ColumnDef.valueGetter (fun x -> x.LaborUnitCost)
+                        ColumnDef.valueSetter (fun newValue _ row  -> { row with LaborUnitCost = newValue |> float  } |> UpdateBoQItem |> dispatch)
+                        ColumnDef.editable (fun _ _ -> true)
                         ColumnDef.width 75
                     ]
                     ColumnDef.create<float> [
@@ -139,7 +165,6 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
 let view (model: Model) (dispatch: Msg -> unit) =
     Bulma.hero [
         hero.isFullHeight
-
         color.isPrimary
         prop.style [
             style.backgroundSize "cover"
