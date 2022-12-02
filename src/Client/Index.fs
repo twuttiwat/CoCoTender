@@ -73,7 +73,6 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                     ColumnDef.resizable true
                 ]
                 AgGrid.domLayout AutoHeight
-
                 AgGrid.onColumnGroupOpened (fun x -> x.AutoSizeGroupColumns())
                 AgGrid.onGridReady (fun x -> x.AutoSizeAllColumns())
                 AgGrid.ensureDomOrder true
@@ -119,55 +118,25 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                     ]
                 ]
             ]
+            Bulma.level [
+                prop.style [
+                    style.paddingRight 100
+                    style.fontSize 14
+                    style.fontWeight.bold
+                ]
+                color.hasBackgroundLight
+                prop.children [
+                    Bulma.levelLeft []
+                    Bulma.levelRight [
+                        Bulma.levelItem "Total Direct Cost"
+                        Bulma.levelItem  (model.BoQItems |> List.sumBy (fun x -> x.TotalCost) |> string)
+                    ]
+                ]
+            ]
         ]
     ]
-    // Bulma.box [
-    //     Bulma.content [
-    //         Html.ol [
-    //             for boqItem in model.BoQItems do
-    //                 let itemText = $"{boqItem.Description} {boqItem.Quantity} {boqItem.Unit}"
-    //                 Html.li [ prop.text itemText ]
-    //         ]
-    //     ]
-    //     Html.div [
-    //         AgGrid.grid [
-    //             AgGrid.rowData (model.BoQItems |> Array.ofList)
-    //             AgGrid.columnDefs [
-    //                 ColumnDef.create<string> [
-    //                     ColumnDef.headerName "Description"
-    //                 ]
-    //             ]
-    //         ]
-    //     ]
-    //     Bulma.field.div [
-    //         field.isGrouped
-    //         prop.children [
-    //             Bulma.control.p [
-    //                 control.isExpanded
-    //                 prop.children [
-    //                     Bulma.input.text [
-    //                         prop.value model.Input
-    //                         prop.placeholder "What needs to be done?"
-    //                         prop.onChange (fun x -> SetInput x |> dispatch)
-    //                     ]
-    //                 ]
-    //             ]
-    //             Bulma.control.p [
-    //                 Bulma.button.button [
-    //                     color.isPrimary
-    //                     prop.disabled (String.IsNullOrWhiteSpace model.Input)
-    //                     prop.onClick (fun _ -> dispatch AddBoQItem)
-    //                     prop.text "Add"
-    //                 ]
-    //             ]
-    //         ]
-    //     ]
-    // ]
 
 let view (model: Model) (dispatch: Msg -> unit) =
-    // Bulma.container [
-    //     containerBox model dispatch
-    // ]
     Bulma.hero [
         hero.isFullHeight
 
