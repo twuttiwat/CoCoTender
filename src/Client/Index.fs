@@ -55,43 +55,116 @@ let navBrand =
         ]
     ]
 
+open Feliz.AgGrid
+
 let containerBox (model: Model) (dispatch: Msg -> unit) =
-    Bulma.box [
-        Bulma.content [
-            Html.ol [
-                for boqItem in model.BoQItems do
-                    let itemText = $"{boqItem.Description} {boqItem.Quantity} {boqItem.Unit}"
-                    Html.li [ prop.text itemText ]
-            ]
-        ]
-        Bulma.field.div [
-            field.isGrouped
-            prop.children [
-                Bulma.control.p [
-                    control.isExpanded
-                    prop.children [
-                        Bulma.input.text [
-                            prop.value model.Input
-                            prop.placeholder "What needs to be done?"
-                            prop.onChange (fun x -> SetInput x |> dispatch)
-                        ]
-                    ]
+    Html.div [
+        prop.className ThemeClass.Balham
+        prop.children [
+            AgGrid.grid [
+                AgGrid.rowData (model.BoQItems |> Array.ofList)
+                AgGrid.defaultColDef [
+                    ColumnDef.resizable true
                 ]
-                Bulma.control.p [
-                    Bulma.button.button [
-                        color.isPrimary
-                        prop.disabled (String.IsNullOrWhiteSpace model.Input)
-                        prop.onClick (fun _ -> dispatch AddBoQItem)
-                        prop.text "Add"
+                AgGrid.domLayout AutoHeight
+
+                AgGrid.onColumnGroupOpened (fun x -> x.AutoSizeGroupColumns())
+                AgGrid.onGridReady (fun x -> x.AutoSizeAllColumns())
+                AgGrid.ensureDomOrder true
+                AgGrid.columnDefs [
+                    ColumnDef.create<string> [
+                        ColumnDef.headerName "Description"
+                        ColumnDef.valueGetter (fun x -> x.Description)
+                    ]
+                    ColumnDef.create<float> [
+                        ColumnDef.headerName "Quantity"
+                        ColumnDef.valueGetter (fun x -> x.Quantity)
+                        ColumnDef.width 75
+                    ]
+                    ColumnDef.create<string> [
+                        ColumnDef.headerName "Unit"
+                        ColumnDef.valueGetter (fun x -> x.Unit)
+                        ColumnDef.width 50
+                    ]
+                    ColumnDef.create<string> [
+                        ColumnDef.headerName "Material"
+                        ColumnDef.valueGetter (fun x -> x.Material)
+                        ColumnDef.width 150
+                    ]
+                    ColumnDef.create<float> [
+                        ColumnDef.headerName "M. UnitCost"
+                        ColumnDef.valueGetter (fun x -> x.MaterialUnitCost)
+                        ColumnDef.width 75
+                    ]
+                    ColumnDef.create<string> [
+                        ColumnDef.headerName "Labor"
+                        ColumnDef.valueGetter (fun x -> x.Labor)
+                        ColumnDef.width 150
+                    ]
+                    ColumnDef.create<float> [
+                        ColumnDef.headerName "L. UnitCost"
+                        ColumnDef.valueGetter (fun x -> x.LaborUnitCost)
+                        ColumnDef.width 75
+                    ]
+                    ColumnDef.create<float> [
+                        ColumnDef.headerName "Total Cost"
+                        ColumnDef.valueGetter (fun x -> x.TotalCost)
+                        ColumnDef.width 75
                     ]
                 ]
             ]
         ]
     ]
+    // Bulma.box [
+    //     Bulma.content [
+    //         Html.ol [
+    //             for boqItem in model.BoQItems do
+    //                 let itemText = $"{boqItem.Description} {boqItem.Quantity} {boqItem.Unit}"
+    //                 Html.li [ prop.text itemText ]
+    //         ]
+    //     ]
+    //     Html.div [
+    //         AgGrid.grid [
+    //             AgGrid.rowData (model.BoQItems |> Array.ofList)
+    //             AgGrid.columnDefs [
+    //                 ColumnDef.create<string> [
+    //                     ColumnDef.headerName "Description"
+    //                 ]
+    //             ]
+    //         ]
+    //     ]
+    //     Bulma.field.div [
+    //         field.isGrouped
+    //         prop.children [
+    //             Bulma.control.p [
+    //                 control.isExpanded
+    //                 prop.children [
+    //                     Bulma.input.text [
+    //                         prop.value model.Input
+    //                         prop.placeholder "What needs to be done?"
+    //                         prop.onChange (fun x -> SetInput x |> dispatch)
+    //                     ]
+    //                 ]
+    //             ]
+    //             Bulma.control.p [
+    //                 Bulma.button.button [
+    //                     color.isPrimary
+    //                     prop.disabled (String.IsNullOrWhiteSpace model.Input)
+    //                     prop.onClick (fun _ -> dispatch AddBoQItem)
+    //                     prop.text "Add"
+    //                 ]
+    //             ]
+    //         ]
+    //     ]
+    // ]
 
 let view (model: Model) (dispatch: Msg -> unit) =
+    // Bulma.container [
+    //     containerBox model dispatch
+    // ]
     Bulma.hero [
         hero.isFullHeight
+
         color.isPrimary
         prop.style [
             style.backgroundSize "cover"
@@ -106,17 +179,11 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
             Bulma.heroBody [
                 Bulma.container [
-                    Bulma.column [
-                        column.is6
-                        column.isOffset3
-                        prop.children [
-                            Bulma.title [
-                                text.hasTextCentered
-                                prop.text "CoCoTender"
-                            ]
-                            containerBox model dispatch
-                        ]
+                    Bulma.title [
+                        text.hasTextCentered
+                        prop.text "CoCoTender"
                     ]
+                    containerBox model dispatch
                 ]
             ]
         ]

@@ -22,6 +22,8 @@ module Storage =
         match defaultItem with
         | Ok defaultItem' ->
             addBoQItem defaultItem' |> ignore
+            addBoQItem defaultItem' |> ignore
+            addBoQItem defaultItem' |> ignore
         | _ -> ()
 
 module Dto =
