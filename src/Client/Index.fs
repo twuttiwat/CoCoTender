@@ -5,51 +5,56 @@ open Elmish
 open Fable.Remoting.Client
 open Shared
 
-type Model = { BoQItems: BoQItemDto list; Input: string }
+type Model = { BoQItems: BoQItemDto list; AllCost: AllCost }
 
 type Msg =
-    | GotBoQItems of BoQItemDto list
-    | SetInput of string
+    | GetBoQItems
+    | GotBoQItems of BoQItemDto list*AllCost
     | AddBoQItem
-    | AddedBoQItem of BoQItemDto
+    | AddedBoQItem of BoQItemDto*AllCost
     | UpdateBoQItem of BoQItemDto
-    | UpdatedBoQItem of BoQItemDto
+    | UpdatedBoQItem of BoQItemDto*AllCost
+    | DeleteBoQItem of itemId:Guid
 
 let cocoTenderApi =
     Remoting.createApi ()
     |> Remoting.withRouteBuilder Route.builder
     |> Remoting.buildProxy<ICoCoTenderApi>
 
-let defaultNewItem =
+let defaultNewItem () =
     BoQItemDto.create (Guid.NewGuid()) "New Item" 0.0 "m" "Material 1"
         0.0 "Labor 1" 0.0 0.0
 
 let init () : Model * Cmd<Msg> =
-    let model = { BoQItems = []; Input = "" }
+    let model = { BoQItems = []; AllCost = {DirectCost = 0.0; EstimateCost = 0.0} }
 
     let cmd = Cmd.OfAsync.perform cocoTenderApi.getBoQItems () GotBoQItems
 
     model, cmd
 
-// open Fable.Core.JS
-
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
-    | GotBoQItems items -> { model with BoQItems = items }, Cmd.none
-    | SetInput value -> { model with Input = value }, Cmd.none
+    | GetBoQItems ->
+        let cmd = Cmd.OfAsync.perform cocoTenderApi.getBoQItems () GotBoQItems
+        model, cmd
+    | GotBoQItems (items,allCost) -> { model with BoQItems = items; AllCost = allCost }, Cmd.none
+
     | AddBoQItem ->
-        let cmd = Cmd.OfAsync.perform cocoTenderApi.addBoQItem defaultNewItem AddedBoQItem
-
+        let cmd = Cmd.OfAsync.perform cocoTenderApi.addBoQItem (defaultNewItem()) AddedBoQItem
         model, cmd
-    | AddedBoQItem boqItem -> { model with BoQItems = model.BoQItems @ [ boqItem ] }, Cmd.none
+    | AddedBoQItem (boqItem, allCost) ->
+        { model with BoQItems = model.BoQItems @ [ boqItem ]; AllCost = allCost }, Cmd.none
+
     | UpdateBoQItem boqItem ->
-        printfn "UpdateBoQItem %A" boqItem
         let cmd = Cmd.OfAsync.perform cocoTenderApi.updateBoQItem boqItem UpdatedBoQItem
-
         model, cmd
-    | UpdatedBoQItem updatedItem ->
+    | UpdatedBoQItem (updatedItem,allCost) ->
         let updatedItems = model.BoQItems |> List.map (fun x -> if x.Id = updatedItem.Id then updatedItem else x)
-        { model with BoQItems = updatedItems }, Cmd.none
+        { model with BoQItems = updatedItems; AllCost = allCost }, Cmd.none
+
+    | DeleteBoQItem itemId ->
+        let cmd = Cmd.OfAsync.perform cocoTenderApi.deleteBoQItem itemId (fun _ -> GetBoQItems)
+        model, cmd
 
 open Feliz
 open Feliz.Bulma
@@ -70,6 +75,7 @@ let navBrand =
 
 open Feliz.AgGrid
 
+
 let containerBox (model: Model) (dispatch: Msg -> unit) =
     Html.div [
         prop.className ThemeClass.Balham
@@ -85,8 +91,9 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                     ColumnDef.resizable true
                 ]
                 AgGrid.domLayout AutoHeight
-                AgGrid.onColumnGroupOpened (fun x -> x.AutoSizeGroupColumns())
                 AgGrid.onGridReady (fun x -> x.AutoSizeAllColumns())
+                AgGrid.singleClickEdit true
+                AgGrid.enableCellTextSelection true
                 AgGrid.ensureDomOrder true
                 AgGrid.columnDefs [
                     ColumnDef.create<string> [
@@ -105,7 +112,7 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                     ColumnDef.create<string> [
                         ColumnDef.headerName "Unit"
                         ColumnDef.valueGetter (fun x -> x.Unit)
-                        ColumnDef.valueSetter (fun newValue _ row  -> { row with Description = newValue } |> UpdateBoQItem |> dispatch)
+                        ColumnDef.valueSetter (fun newValue _ row  -> { row with Unit = newValue } |> UpdateBoQItem |> dispatch)
                         ColumnDef.editable (fun _ _ -> true)
                         ColumnDef.width 50
                     ]
@@ -142,6 +149,15 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                         ColumnDef.valueGetter (fun x -> x.TotalCost)
                         ColumnDef.width 75
                     ]
+                    ColumnDef.create<Guid> [
+                        ColumnDef.valueGetter (fun x -> x.Id)
+                        ColumnDef.cellRendererFramework (fun itemId _ ->
+                            Html.button [
+                                prop.text "🗑️"
+                                prop.onClick (fun _ -> dispatch (DeleteBoQItem itemId))
+                            ]
+                        )
+                    ]
                 ]
             ]
             Bulma.level [
@@ -154,8 +170,12 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                 prop.children [
                     Bulma.levelLeft []
                     Bulma.levelRight [
-                        Bulma.levelItem "Total Direct Cost"
-                        Bulma.levelItem  (model.BoQItems |> List.sumBy (fun x -> x.TotalCost) |> string)
+                        Bulma.levelItem "Direct Cost"
+                        Bulma.levelItem  (model.AllCost.DirectCost |> string)
+                    ]
+                    Bulma.levelRight [
+                        Bulma.levelItem "Estimate Cost"
+                        Bulma.levelItem  (model.AllCost.EstimateCost |> string)
                     ]
                 ]
             ]

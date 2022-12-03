@@ -102,6 +102,7 @@ module Project =
   open BoQItem
 
   type DirectCost = DirectCost of float
+  type EstimateCost = EstimateCost of float
   type FactorFTable = FactorFTable of (float*float) list
 
   let calcDirectCost items =
@@ -151,3 +152,8 @@ module Project =
     let cost = estimateCost' loadFactorFTable items
     Ok cost
 
+  let tryGetAllCost loadFactorFTable boqItems = result {
+    let directCost = boqItems |> Seq.sumBy (fun x -> x |> BoQItem.value |> fun y -> y.TotalCost)
+    let! estimateCost = tryEstimateCost loadFactorFTable boqItems
+    return (DirectCost directCost, EstimateCost estimateCost)
+  }

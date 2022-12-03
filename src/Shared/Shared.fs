@@ -31,10 +31,22 @@ module BoQItemDto =
             TotalCost = totalCost
         }
 
-type ICoCoTenderApi =
-    { getBoQItems: unit -> Async<BoQItemDto list>
-      addBoQItem: BoQItemDto -> Async<BoQItemDto>
-      updateBoQItem: BoQItemDto -> Async<BoQItemDto> }
+    let recalc item =
+        { item with TotalCost = item.Quantity * item.MaterialUnitCost + item.Quantity * item.LaborUnitCost}
+
+type AllCost =
+    {
+        DirectCost : float
+        EstimateCost : float
+    }
+
+type ICoCoTenderApi = {
+    getBoQItems: unit -> Async<BoQItemDto list*AllCost>
+    addBoQItem: BoQItemDto -> Async<BoQItemDto*AllCost>
+    updateBoQItem: BoQItemDto -> Async<BoQItemDto*AllCost>
+    deleteBoQItem: Guid -> Async<unit>
+    getAllCost: unit -> Async<AllCost>
+}
 
 module Route =
     let builder typeName methodName =

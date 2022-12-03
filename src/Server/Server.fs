@@ -7,6 +7,7 @@ open Saturn
 open System
 open Shared
 open CoCoTender.Domain
+open Project
 
 module Storage =
     let boqItems = ResizeArray<BoQItem>()
@@ -19,6 +20,14 @@ module Storage =
         let index = boqItems.FindIndex( fun x -> x = boqItem)
         boqItems[index] <- boqItem
         Ok ()
+
+    let deleteBoQItem itemId =
+        let index = boqItems.FindIndex( fun x -> x |> BoQItem.value |> fun y -> y.Id = itemId)
+        boqItems.RemoveAt(index)
+        Ok ()
+
+    let loadFactorFTable () =
+        FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
 
     do
         let qty = Quantity (10.0, "m^2")
@@ -46,9 +55,19 @@ module Dto =
         let labor = Labor { Name = dto.Labor; Unit = dto.Unit; UnitCost = dto.LaborUnitCost }
         BoQItem.tryCreate dto.Id dto.Description qty material labor
 
+let getAllCost () =
+    match Project.tryGetAllCost Storage.loadFactorFTable (Storage.boqItems |> List.ofSeq) with
+    | Ok (DirectCost directCost, EstimateCost estimateCost) ->
+        { DirectCost = directCost; EstimateCost = estimateCost}
+    | Error e ->
+        failwith e
+
 let cocoTenderApi =
     {
-        getBoQItems = fun () -> async { return Storage.boqItems |> List.ofSeq |> List.map Dto.toBoQItemDto }
+        getBoQItems = fun () -> async {
+            let boqItems = Storage.boqItems |> List.ofSeq
+            return (boqItems |> List.map Dto.toBoQItemDto), getAllCost()
+        }
         addBoQItem =
             fun boqItemDto ->
                 async {
@@ -56,7 +75,7 @@ let cocoTenderApi =
                         match  boqItemDto |> Dto.toBoQItemDomain with
                         | Ok boqItem ->
                             match Storage.addBoQItem boqItem with
-                            | Ok () -> boqItemDto
+                            | Ok () -> boqItemDto, getAllCost()
                             | Error e -> failwith e
                         | Error e -> failwith e
                 }
@@ -69,9 +88,26 @@ let cocoTenderApi =
                             match boqItem |> BoQItem.tryUpdate with
                             | Ok updatedBoQItem ->
                                 match Storage.updateBoQItem updatedBoQItem with
-                                | Ok () -> updatedBoQItem |> Dto.toBoQItemDto
+                                | Ok () -> (updatedBoQItem |> Dto.toBoQItemDto), getAllCost()
                                 | Error e -> failwith e
                             | Error e -> failwith e
+                        | Error e -> failwith e
+                }
+        deleteBoQItem =
+            fun itemId ->
+                async {
+                    return
+                        match Storage.deleteBoQItem itemId with
+                        | Ok () -> ()
+                        | Error e -> failwith e
+                }
+        getAllCost =
+            fun () ->
+                async {
+                    let directCost = Storage.boqItems |> Seq.sumBy (fun x -> x |> BoQItem.value |> fun y -> y.TotalCost)
+                    return
+                        match Project.tryEstimateCost Storage.loadFactorFTable (Storage.boqItems |> List.ofSeq) with
+                        | Ok estimateCost -> { DirectCost = directCost; EstimateCost = estimateCost}
                         | Error e -> failwith e
                 }
     }
