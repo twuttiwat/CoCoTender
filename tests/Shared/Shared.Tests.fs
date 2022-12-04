@@ -6,6 +6,7 @@ open Fable.Mocha
 open Expecto
 #endif
 
+open System
 open Shared
 
 let shared = testList "Shared" [
@@ -13,7 +14,7 @@ let shared = testList "Shared" [
         let expected = false
 
         let boqItem =
-            BoQItemDto.create "" 10.0 "m^2" "Big Tile" 100.0
+            BoQItemDto.create (Guid.NewGuid()) "" 10.0 "m^2" "Big Tile" 100.0
                             "Do Tiling" 50.0 1500.0
         let actual = BoQItemDto.isValid boqItem
         Expect.equal actual expected "Should be false"

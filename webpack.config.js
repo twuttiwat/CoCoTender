@@ -61,11 +61,16 @@ module.exports = function(env, arg) {
         // CSS in a separate files.
         entry: isProduction ? {
             app: [resolve(CONFIG.fsharpEntry), resolve(CONFIG.cssEntry)]
-        } : {
-            app: resolve(CONFIG.fsharpEntry),
-            style: resolve(CONFIG.cssEntry)
-        },
-
+        } : env.test ? {
+                app: resolve(config.fsharpEntry)
+            }
+            :   {
+                    app: resolve(CONFIG.fsharpEntry),
+                    style: resolve(CONFIG.cssEntry)
+                },
+        // entry: {
+        //     app: resolve(config.fsharpEntry)
+        // },
         // Add a hash to the output file name in production
         // to prevent browser caching if code changes
         output: {

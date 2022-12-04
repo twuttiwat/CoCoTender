@@ -70,9 +70,12 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             { model with BoQItems = model.BoQItems @ [ boqItem ]; AllCost = allCost }, Cmd.none
     | AddedBoQItem (Error msg) -> showError' msg
 
-    | UpdateBoQItem boqItem ->
-        let cmd = Cmd.OfAsync.perform cocoTenderApi.updateBoQItem boqItem UpdatedBoQItem
-        model, cmd
+    | UpdateBoQItem (boqItem: BoQItemDto) ->
+        if boqItem |> BoQItemDto.isValid then
+            let cmd = Cmd.OfAsync.perform cocoTenderApi.updateBoQItem boqItem UpdatedBoQItem
+            model, cmd
+        else
+            showError' "BoQItem is not valid"
     | UpdatedBoQItem (Ok (updatedItem,allCost)) ->
         let updatedItems = model.BoQItems |> List.map (fun x -> if x.Id = updatedItem.Id then updatedItem else x)
         { model with BoQItems = updatedItems; AllCost = allCost }, Cmd.none

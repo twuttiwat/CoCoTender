@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Server\Server.fsproj" />
     <ProjectReference Include="..\Shared\Shared.Tests.fsproj" />
+    <ProjectReference Include="..\..\src\CoCoTender.Domain\CoCoTender.Domain.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
