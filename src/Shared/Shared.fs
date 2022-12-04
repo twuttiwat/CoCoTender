@@ -37,8 +37,11 @@ module BoQItemDto =
 type AllCost =
     {
         DirectCost : float
+        FactorF : float
         EstimateCost : float
     }
+
+type FactorFInfo = (string*float) list
 
 type ICoCoTenderApi = {
     getBoQItems: unit -> Async<BoQItemDto list*AllCost>
@@ -46,6 +49,7 @@ type ICoCoTenderApi = {
     updateBoQItem: BoQItemDto -> Async<BoQItemDto*AllCost>
     deleteBoQItem: Guid -> Async<unit>
     getAllCost: unit -> Async<AllCost>
+    getFactorFInfo: unit->Async<FactorFInfo>
 }
 
 module Route =

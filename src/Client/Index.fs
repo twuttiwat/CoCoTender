@@ -5,7 +5,13 @@ open Elmish
 open Fable.Remoting.Client
 open Shared
 
-type Model = { BoQItems: BoQItemDto list; AllCost: AllCost }
+type Model =
+    {
+        BoQItems: BoQItemDto list
+        AllCost: AllCost
+        ShowFactorFView: bool
+        FactorFInfo: FactorFInfo
+    }
 
 type Msg =
     | GetBoQItems
@@ -15,6 +21,8 @@ type Msg =
     | UpdateBoQItem of BoQItemDto
     | UpdatedBoQItem of BoQItemDto*AllCost
     | DeleteBoQItem of itemId:Guid
+    | ToggleFactorFView
+    | GotFactorFInfo of FactorFInfo
 
 let cocoTenderApi =
     Remoting.createApi ()
@@ -26,11 +34,18 @@ let defaultNewItem () =
         0.0 "Labor 1" 0.0 0.0
 
 let init () : Model * Cmd<Msg> =
-    let model = { BoQItems = []; AllCost = {DirectCost = 0.0; EstimateCost = 0.0} }
+    let model =
+        {
+            BoQItems = []
+            AllCost = {DirectCost = 0.0; FactorF = 0.0; EstimateCost = 0.0}
+            ShowFactorFView = false
+            FactorFInfo = []
+        }
 
-    let cmd = Cmd.OfAsync.perform cocoTenderApi.getBoQItems () GotBoQItems
+    let cmdGetBoQItems = Cmd.OfAsync.perform cocoTenderApi.getBoQItems () GotBoQItems
+    let cmdGetFactorFInfo = Cmd.OfAsync.perform cocoTenderApi.getFactorFInfo () GotFactorFInfo
 
-    model, cmd
+    model, Cmd.batch [ cmdGetBoQItems; cmdGetFactorFInfo ]
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -56,6 +71,11 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         let cmd = Cmd.OfAsync.perform cocoTenderApi.deleteBoQItem itemId (fun _ -> GetBoQItems)
         model, cmd
 
+    | GotFactorFInfo info -> { model with FactorFInfo = info }, Cmd.none
+
+    | ToggleFactorFView ->
+        { model with ShowFactorFView = model.ShowFactorFView |> not }, Cmd.none
+
 open Feliz
 open Feliz.Bulma
 
@@ -74,7 +94,6 @@ let navBrand =
     ]
 
 open Feliz.AgGrid
-
 
 let containerBox (model: Model) (dispatch: Msg -> unit) =
     Html.div [
@@ -162,7 +181,7 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
             ]
             Bulma.level [
                 prop.style [
-                    style.paddingRight 100
+                    style.paddingRight 300
                     style.fontSize 14
                     style.fontWeight.bold
                 ]
@@ -170,12 +189,54 @@ let containerBox (model: Model) (dispatch: Msg -> unit) =
                 prop.children [
                     Bulma.levelLeft []
                     Bulma.levelRight [
-                        Bulma.levelItem "Direct Cost"
-                        Bulma.levelItem  (model.AllCost.DirectCost |> string)
+                        Bulma.levelItem (Bulma.label $"Direct Cost")
+                        Bulma.levelItem (Bulma.label $"{model.AllCost.DirectCost}")
+                        Bulma.levelItem (Bulma.label $"Estimate Cost")
+                        Bulma.levelItem (Bulma.label $"{model.AllCost.EstimateCost}")
+                        Bulma.levelItem (
+                            Bulma.button.button [
+                                prop.text "Show Factor F"
+                                prop.onClick (fun _ -> ToggleFactorFView |> dispatch)
+                            ]
+                        )
                     ]
-                    Bulma.levelRight [
-                        Bulma.levelItem "Estimate Cost"
-                        Bulma.levelItem  (model.AllCost.EstimateCost |> string)
+                ]
+            ]
+        ]
+    ]
+
+let factorFView (model: Model) dispatch =
+    printfn "Info %A Factor F %A" model.FactorFInfo model.AllCost.FactorF
+    let lowerBoundIndex = model.FactorFInfo |> List.tryFindIndexBack (fun x -> x |> snd |> (>=) model.AllCost.FactorF)
+    printfn "LowerBoundIndex %A" lowerBoundIndex
+    let factorFTr i (condition: string,factorF) =
+        let isSelected =
+            match lowerBoundIndex with
+            | Some index -> i = index || i = (index + 1)
+            | _ -> false
+
+        Html.tr [
+            if isSelected then yield prop.className "is-selected"
+            yield prop.children [Html.td condition; Html.td (factorF |> string)]
+        ]
+
+    QuickView.quickview [
+        if model.ShowFactorFView then yield quickview.isActive
+        yield prop.children [
+            QuickView.header [
+                Html.div [
+                    prop.style [ style.color.black ]
+                    prop.text "Factor F"
+                ]
+                Bulma.delete [ prop.onClick (fun _ -> ToggleFactorFView |> dispatch) ]
+            ]
+            QuickView.body [
+                QuickView.block [
+                    Bulma.table [
+                        Html.thead [
+                            Html.tr [ Html.th "Direct Cost Condition"; Html.th "Factor F" ]
+                        ]
+                        Html.tbody (model.FactorFInfo |> List.mapi factorFTr)
                     ]
                 ]
             ]
@@ -204,6 +265,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                         prop.text "CoCoTender"
                     ]
                     containerBox model dispatch
+                    factorFView model dispatch
                 ]
             ]
         ]

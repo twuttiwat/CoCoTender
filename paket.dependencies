@@ -3,6 +3,7 @@ framework: net6.0
 storage: none
 
 nuget Feliz.AgGrid
+nuget Feliz.Bulma.QuickView
 nuget Fsharp.Core ~> 6
 nuget Fable.Remoting.Giraffe
 nuget Saturn

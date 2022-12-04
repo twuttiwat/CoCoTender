@@ -3,7 +3,7 @@
 open FsToolkit.ErrorHandling
 
 type Quantity = Quantity of float*string
-type UnitCost = 
+type UnitCost =
   {
     Name : string
     UnitCost : float
@@ -21,44 +21,44 @@ type BoQItem = private {
   }
 
 module BoQItem =
-  
+
   let areUnitsMatched  qty materialUnitCost laborUnitCost =
     match qty, materialUnitCost, laborUnitCost with
     | Quantity (_, qtyUnit), Material {Unit = materialUnit}, Labor {Unit = laborUnit} ->
       qtyUnit = materialUnit && qtyUnit = laborUnit
 
-  let recalcTotalCost item = 
+  let recalcTotalCost item =
     let calcTotalCost() =
       match item.Quantity, item.MaterialUnitCost, item.LaborUnitCost with
       | Quantity (qty,_), Material {UnitCost = mUnitCost}, Labor {UnitCost = lbUnitCost} ->
         (qty * mUnitCost) + (qty * lbUnitCost)
-      
-    result 
+
+    result
       {
-        do! areUnitsMatched item.Quantity item.MaterialUnitCost item.LaborUnitCost |> Result.requireTrue "Unit are Not matched." 
+        do! areUnitsMatched item.Quantity item.MaterialUnitCost item.LaborUnitCost |> Result.requireTrue "Unit are Not matched."
         return { item with TotalCost = calcTotalCost() }
       }
 
-        
-  let create desc qty materialUnitCost laborUnitCost = result {
-    
-    do! areUnitsMatched qty materialUnitCost laborUnitCost |> Result.requireTrue "Unit are Not matched." 
 
-    let! item =  
+  let create desc qty materialUnitCost laborUnitCost = result {
+
+    do! areUnitsMatched qty materialUnitCost laborUnitCost |> Result.requireTrue "Unit are Not matched."
+
+    let! item =
       {
         Description = desc
         Quantity = qty
         MaterialUnitCost = materialUnitCost
         LaborUnitCost = laborUnitCost
         TotalCost = 0.0
-      } 
+      }
       |> recalcTotalCost
 
-    return item      
+    return item
   }
 
-  let value item = 
-    {| 
+  let value item =
+    {|
       Description = item.Description
       Quantity = item.Quantity
       MaterialUnitCost = item.MaterialUnitCost
@@ -66,7 +66,7 @@ module BoQItem =
       TotalCost = item.TotalCost
     |}
 
-  let updateDesc newDesc item = 
+  let updateDesc newDesc item =
     { item with Description = newDesc }
 
   let updateQty newQty item =
@@ -88,8 +88,8 @@ module Project =
   type DirectCost = DirectCost of float
   type FactorFTable = FactorFTable of (float*float) list
 
-  let calcDirectCost items = 
-    items 
+  let calcDirectCost items =
+    items
     |> List.sumBy (fun a -> a |> value |> (fun b -> b.TotalCost))
     |> DirectCost
 
@@ -116,28 +116,28 @@ module Project =
     | LessThanMin f -> f
     | GreaterThanMax f -> f
     | BetweenRange f -> f
-     
+
   let applyFactorF loadFactorFTable (DirectCost directCost) =
     let factorF = calcFactorF (loadFactorFTable()) (DirectCost directCost)
     directCost * factorF
 
   // Strip value after thousands
-  let roundCost  = function 
+  let roundCost  = function
     | a when a < 1000.0 -> a
-    | b -> 
-      b / 1000.0  
+    | b ->
+      b / 1000.0
       |> System.Math.Truncate
       |> (*) 1000.0
 
-  let estimateCost' loadFactorFTable = calcDirectCost >> (applyFactorF loadFactorFTable) >> roundCost 
+  let estimateCost' loadFactorFTable = calcDirectCost >> (applyFactorF loadFactorFTable) >> roundCost
 
-  let estimateCost loadFactorFTable items : Result<float,string> = 
+  let estimateCost loadFactorFTable items : Result<float,string> =
     let cost = estimateCost' loadFactorFTable items
     Ok cost
 
-//    
+//
 // TESTS
-// 
+//
 open BoQItem
 open Project
 
@@ -147,14 +147,14 @@ let material = Material { Name = "Big Tile"; UnitCost = 100.0; Unit = "m^2" }
 let labor = Labor { Name = "Do Tiling"; UnitCost = 50.0; Unit = "m^2" }
 let totalCost = 10.0*100.0 + 10.0*50.0
 
-let item = 
+let item =
   match BoQItem.create desc qty material labor with
   | Ok item' -> item'
   | _ -> failwith "Could not create item for updating"
-  
-let testItemDiffUnits = 
-  let newMaterial, newLabor = 
-    match material,labor with 
+
+let testItemDiffUnits =
+  let newMaterial, newLabor =
+    match material,labor with
     | Material m, Labor lb ->  Material { m with Unit = "m"},  Labor {lb with Unit = "cm"}
 
   match BoQItem.create desc qty newMaterial newLabor with
@@ -164,13 +164,20 @@ let testItemDiffUnits =
 let testUpdateQty =
   let (Quantity (qtyVal,qtyUnit)) = qty
   let result = item |> updateQty (Quantity (qtyVal * 2.0, qtyUnit))
-  match result with 
-  | Ok item -> 
+  match result with
+  | Ok item ->
     let (Quantity (newQtyVal,_)) = item.Quantity
     newQtyVal = qtyVal * 2.0 && item.TotalCost = totalCost * 2.0
   | _ -> false
 
-let loadFactorFTableFn = 
+let loadFactorFTableFn =
   function () -> FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
 
-estimateCost loadFactorFTableFn [item] 
+estimateCost loadFactorFTableFn [item]
+
+let getFactorFInfo loadFactorFTableFn =
+    let (FactorFTable fTable) = loadFactorFTableFn()
+    let info = fTable |> List.map (fun x -> x |> fst |> string |> sprintf "<= %s", x |> snd)
+    info @ [ (">", fTable |> List.last |> snd) ]
+
+getFactorFInfo loadFactorFTableFn

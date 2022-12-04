@@ -57,8 +57,12 @@ module Dto =
 
 let getAllCost () =
     match Project.tryGetAllCost Storage.loadFactorFTable (Storage.boqItems |> List.ofSeq) with
-    | Ok (DirectCost directCost, EstimateCost estimateCost) ->
-        { DirectCost = directCost; EstimateCost = estimateCost}
+    | Ok (DirectCost directCost, FactorF factorF, EstimateCost estimateCost) ->
+        {
+            DirectCost = directCost
+            FactorF = factorF
+            EstimateCost = estimateCost
+        }
     | Error e ->
         failwith e
 
@@ -102,13 +106,11 @@ let cocoTenderApi =
                         | Error e -> failwith e
                 }
         getAllCost =
+            fun () -> async { return getAllCost() }
+        getFactorFInfo =
             fun () ->
                 async {
-                    let directCost = Storage.boqItems |> Seq.sumBy (fun x -> x |> BoQItem.value |> fun y -> y.TotalCost)
-                    return
-                        match Project.tryEstimateCost Storage.loadFactorFTable (Storage.boqItems |> List.ofSeq) with
-                        | Ok estimateCost -> { DirectCost = directCost; EstimateCost = estimateCost}
-                        | Error e -> failwith e
+                    return Project.getFactorFInfo Storage.loadFactorFTable
                 }
     }
 
