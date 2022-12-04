@@ -44,12 +44,12 @@ type AllCost =
 type FactorFInfo = (string*float) list
 
 type ICoCoTenderApi = {
-    getBoQItems: unit -> Async<BoQItemDto list*AllCost>
-    addBoQItem: BoQItemDto -> Async<BoQItemDto*AllCost>
-    updateBoQItem: BoQItemDto -> Async<BoQItemDto*AllCost>
-    deleteBoQItem: Guid -> Async<unit>
-    getAllCost: unit -> Async<AllCost>
-    getFactorFInfo: unit->Async<FactorFInfo>
+    getBoQItems: unit -> Async<Result<BoQItemDto list*AllCost,string>>
+    addBoQItem: BoQItemDto -> Async<Result<BoQItemDto*AllCost,string>>
+    updateBoQItem: BoQItemDto -> Async<Result<BoQItemDto*AllCost,string>>
+    deleteBoQItem: Guid -> Async<Result<unit,string>>
+    getAllCost: unit -> Async<Result<AllCost,string>>
+    getFactorFInfo: unit->Async<Result<FactorFInfo,string>>
 }
 
 module Route =

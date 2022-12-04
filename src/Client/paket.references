@@ -11,3 +11,5 @@ Fsharp.Core
 Fulma
 Feliz.AgGrid
 Feliz.Bulma.QuickView
+Elmish.Toastr
+jquery

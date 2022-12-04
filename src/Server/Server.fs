@@ -1,5 +1,6 @@
 module Server
 
+open FsToolkit.ErrorHandling
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open Saturn
@@ -55,63 +56,52 @@ module Dto =
         let labor = Labor { Name = dto.Labor; Unit = dto.Unit; UnitCost = dto.LaborUnitCost }
         BoQItem.tryCreate dto.Id dto.Description qty material labor
 
-let getAllCost () =
-    match Project.tryGetAllCost Storage.loadFactorFTable (Storage.boqItems |> List.ofSeq) with
-    | Ok (DirectCost directCost, FactorF factorF, EstimateCost estimateCost) ->
+let getAllCost () = result {
+    let! (DirectCost directCost, FactorF factorF, EstimateCost estimateCost) =
+        Project.tryGetAllCost Storage.loadFactorFTable (Storage.boqItems |> List.ofSeq)
+
+    return
         {
             DirectCost = directCost
             FactorF = factorF
             EstimateCost = estimateCost
         }
-    | Error e ->
-        failwith e
+}
 
 let cocoTenderApi =
     {
-        getBoQItems = fun () -> async {
+        getBoQItems = fun () -> asyncResult {
             let boqItems = Storage.boqItems |> List.ofSeq
-            return (boqItems |> List.map Dto.toBoQItemDto), getAllCost()
+            let! allCost = getAllCost()
+
+            return (boqItems |> List.map Dto.toBoQItemDto), allCost
         }
         addBoQItem =
-            fun boqItemDto ->
-                async {
-                    return
-                        match  boqItemDto |> Dto.toBoQItemDomain with
-                        | Ok boqItem ->
-                            match Storage.addBoQItem boqItem with
-                            | Ok () -> boqItemDto, getAllCost()
-                            | Error e -> failwith e
-                        | Error e -> failwith e
-                }
+            fun boqItemDto -> asyncResult {
+                let! boqItem =  boqItemDto |> Dto.toBoQItemDomain
+                do! Storage.addBoQItem boqItem
+                let boqItemDto' = boqItem |> Dto.toBoQItemDto
+                let! allCost = getAllCost()
+
+                return boqItemDto', allCost
+            }
         updateBoQItem =
-            fun boqItemDto ->
-                async {
-                    return
-                        match  boqItemDto |> Dto.toBoQItemDomain with
-                        | Ok boqItem ->
-                            match boqItem |> BoQItem.tryUpdate with
-                            | Ok updatedBoQItem ->
-                                match Storage.updateBoQItem updatedBoQItem with
-                                | Ok () -> (updatedBoQItem |> Dto.toBoQItemDto), getAllCost()
-                                | Error e -> failwith e
-                            | Error e -> failwith e
-                        | Error e -> failwith e
-                }
+            fun boqItemDto -> asyncResult {
+                let! boqItem =  boqItemDto |> Dto.toBoQItemDomain
+                let! boqItem =  boqItem |> BoQItem.tryUpdate
+                do! Storage.updateBoQItem boqItem
+
+                let boqItemDto' = boqItem |> Dto.toBoQItemDto
+                let! allCost = getAllCost()
+
+                return boqItemDto', allCost
+            }
         deleteBoQItem =
-            fun itemId ->
-                async {
-                    return
-                        match Storage.deleteBoQItem itemId with
-                        | Ok () -> ()
-                        | Error e -> failwith e
-                }
-        getAllCost =
-            fun () -> async { return getAllCost() }
-        getFactorFInfo =
-            fun () ->
-                async {
-                    return Project.getFactorFInfo Storage.loadFactorFTable
-                }
+            fun itemId -> asyncResult {
+                return! Storage.deleteBoQItem itemId
+            }
+        getAllCost = fun () -> asyncResult { return! getAllCost() }
+        getFactorFInfo = fun () -> asyncResult { return Project.getFactorFInfo Storage.loadFactorFTable }
     }
 
 let webApp =

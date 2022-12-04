@@ -3,6 +3,7 @@ module Index
 open System
 open Elmish
 open Fable.Remoting.Client
+open Elmish.Toastr
 open Shared
 
 type Model =
@@ -15,14 +16,14 @@ type Model =
 
 type Msg =
     | GetBoQItems
-    | GotBoQItems of BoQItemDto list*AllCost
+    | GotBoQItems of Result<BoQItemDto list*AllCost,string>
     | AddBoQItem
-    | AddedBoQItem of BoQItemDto*AllCost
+    | AddedBoQItem of Result<BoQItemDto*AllCost,string>
     | UpdateBoQItem of BoQItemDto
-    | UpdatedBoQItem of BoQItemDto*AllCost
+    | UpdatedBoQItem of Result<BoQItemDto*AllCost,string>
     | DeleteBoQItem of itemId:Guid
     | ToggleFactorFView
-    | GotFactorFInfo of FactorFInfo
+    | GotFactorFInfo of Result<FactorFInfo,string>
 
 let cocoTenderApi =
     Remoting.createApi ()
@@ -47,31 +48,42 @@ let init () : Model * Cmd<Msg> =
 
     model, Cmd.batch [ cmdGetBoQItems; cmdGetFactorFInfo ]
 
+let showError model msg =
+    printfn $"Error occurred : {msg}"
+    model, Toastr.message msg |> Toastr.error
+
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
+    let showError' = showError model
+
     match msg with
     | GetBoQItems ->
         let cmd = Cmd.OfAsync.perform cocoTenderApi.getBoQItems () GotBoQItems
         model, cmd
-    | GotBoQItems (items,allCost) -> { model with BoQItems = items; AllCost = allCost }, Cmd.none
+    | GotBoQItems (Ok (items,allCost)) ->
+        { model with BoQItems = items; AllCost = allCost }, Cmd.none
+    | GotBoQItems (Error msg) -> showError' msg
 
     | AddBoQItem ->
         let cmd = Cmd.OfAsync.perform cocoTenderApi.addBoQItem (defaultNewItem()) AddedBoQItem
         model, cmd
-    | AddedBoQItem (boqItem, allCost) ->
-        { model with BoQItems = model.BoQItems @ [ boqItem ]; AllCost = allCost }, Cmd.none
+    | AddedBoQItem (Ok (boqItem, allCost)) ->
+            { model with BoQItems = model.BoQItems @ [ boqItem ]; AllCost = allCost }, Cmd.none
+    | AddedBoQItem (Error msg) -> showError' msg
 
     | UpdateBoQItem boqItem ->
         let cmd = Cmd.OfAsync.perform cocoTenderApi.updateBoQItem boqItem UpdatedBoQItem
         model, cmd
-    | UpdatedBoQItem (updatedItem,allCost) ->
+    | UpdatedBoQItem (Ok (updatedItem,allCost)) ->
         let updatedItems = model.BoQItems |> List.map (fun x -> if x.Id = updatedItem.Id then updatedItem else x)
         { model with BoQItems = updatedItems; AllCost = allCost }, Cmd.none
+    | UpdatedBoQItem (Error msg) -> showError' msg
 
     | DeleteBoQItem itemId ->
         let cmd = Cmd.OfAsync.perform cocoTenderApi.deleteBoQItem itemId (fun _ -> GetBoQItems)
         model, cmd
 
-    | GotFactorFInfo info -> { model with FactorFInfo = info }, Cmd.none
+    | GotFactorFInfo (Ok info) -> { model with FactorFInfo = info }, Cmd.none
+    | GotFactorFInfo (Error msg) -> showError' msg
 
     | ToggleFactorFView ->
         { model with ShowFactorFView = model.ShowFactorFView |> not }, Cmd.none
