@@ -53,6 +53,11 @@ Target.create "Run" (fun _ ->
     |> runParallel
 )
 
+Target.create "RunServerTests" (fun _ ->
+    run dotnet "build" sharedTestsPath
+    run dotnet "watch run" serverTestsPath
+)
+
 Target.create "RunTests" (fun _ ->
     run dotnet "build" sharedTestsPath
     run dotnet "test" domainTestsPath

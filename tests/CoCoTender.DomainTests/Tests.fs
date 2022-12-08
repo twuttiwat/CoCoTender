@@ -70,6 +70,7 @@ module ``Update boq item`` =
         let resultVal = result |> BoQItem.value
         resultVal.TotalCost |> should equal totalCost
 
+
 module ``Calculate factor f`` =
 
     open Project
@@ -90,6 +91,24 @@ module ``Calculate factor f`` =
     let ``should calc factor f by range when cost is between any ranges`` () =
         let result = calcFactorF fTable (DirectCost 55.0)
         result |> should equal 1.3
+
+module ``Show factor f info`` =
+
+    open Project
+
+    let loadFactorFTableFn =
+        function () -> FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
+
+    [<Fact>]
+    let ``should return correct info`` () =
+        let fInfo = getFactorFInfo loadFactorFTableFn
+        let expectedResult = [
+            "<= 10", 1.1
+            "<= 100", 1.5
+            "<= 1000", 1.9
+            "> 1000", 1.9
+        ]
+        fInfo |> should equal expectedResult
 
 module ``Estimate construction cost`` =
 

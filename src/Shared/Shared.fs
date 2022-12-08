@@ -18,6 +18,9 @@ module BoQItemDto =
     let isValid item =
         String.IsNullOrWhiteSpace item.Description |> not
 
+    let recalc item =
+        { item with TotalCost = item.Quantity * item.MaterialUnitCost + item.Quantity * item.LaborUnitCost}
+
     let create itemId description quantity unit material materialUnitCost labor laborUnitCost totalCost =
         {
             Id = itemId
@@ -30,9 +33,8 @@ module BoQItemDto =
             LaborUnitCost = laborUnitCost
             TotalCost = totalCost
         }
+        |> recalc
 
-    let recalc item =
-        { item with TotalCost = item.Quantity * item.MaterialUnitCost + item.Quantity * item.LaborUnitCost}
 
 type AllCost =
     {
