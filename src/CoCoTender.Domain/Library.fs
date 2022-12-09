@@ -14,7 +14,8 @@ type MaterialUnitCost = Material of UnitCost
 type LaborUnitCost = Labor of UnitCost
 
 [<CustomEquality; NoComparison>]
-type BoQItem = private {
+[<CLIMutable>]
+type BoQItem = {
     Id : Guid
     Description : string
     Quantity : Quantity

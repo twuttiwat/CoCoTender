@@ -13,7 +13,7 @@ open Shared
 open CoCoTender.Domain
 open Project
 
-type IStorage =
+type IStorageApi =
     abstract member getBoQItems : unit -> Result<BoQItem list,string>
     abstract member addBoQItem : boqItem:BoQItem -> Result<unit, string>
     abstract member updateBoQItem : boqItem:BoQItem -> Result<unit, string>
@@ -32,7 +32,7 @@ type ResizeArrayStorage() =
             boqItems.Add defaultItem' |> ignore
         | _ -> ()
 
-    interface IStorage with
+    interface IStorageApi with
         member _.getBoQItems() =
             boqItems |> List.ofSeq |> Ok
 
@@ -53,36 +53,6 @@ type ResizeArrayStorage() =
         member _.loadFactorFTable() =
             FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
 
-module Storage =
-    let boqItems = ResizeArray<BoQItem>()
-
-    let addBoQItem (boqItem: BoQItem) =
-        boqItems.Add boqItem
-        Ok ()
-
-    let updateBoQItem boqItem =
-        let index = boqItems.FindIndex( fun x -> x = boqItem)
-        boqItems[index] <- boqItem
-        Ok ()
-
-    let deleteBoQItem itemId =
-        let index = boqItems.FindIndex( fun x -> x |> BoQItem.value |> fun y -> y.Id = itemId)
-        boqItems.RemoveAt(index)
-        Ok ()
-
-    let loadFactorFTable () =
-        FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
-
-    do
-        let qty = Quantity (10.0, "m^2")
-        let material = Material { Name = "Pool Tile"; Unit = "m^2"; UnitCost = 100.0 }
-        let labor = Labor { Name = "Do Tiling"; Unit = "m^2"; UnitCost = 50.0 }
-        let defaultItem = BoQItem.tryCreate (Guid.NewGuid()) "Pool Tile" qty material labor
-        match defaultItem with
-        | Ok defaultItem' ->
-            addBoQItem defaultItem' |> ignore
-        | _ -> ()
-
 module Dto =
     let toBoQItemDto (domain:BoQItem) =
         let domainVal =  domain |> BoQItem.value
@@ -99,10 +69,10 @@ module Dto =
         let labor = Labor { Name = dto.Labor; Unit = dto.Unit; UnitCost = dto.LaborUnitCost }
         BoQItem.tryCreate dto.Id dto.Description qty material labor
 
-let getAllCost (storage:IStorage) () = result {
+let getAllCost (storage:IStorageApi) () = result {
     let! boqItems = storage.getBoQItems()
     let! (DirectCost directCost, FactorF factorF, EstimateCost estimateCost) =
-        Project.tryGetAllCost Storage.loadFactorFTable boqItems
+        Project.tryGetAllCost storage.loadFactorFTable boqItems
 
     return
         {
@@ -112,10 +82,8 @@ let getAllCost (storage:IStorage) () = result {
         }
 }
 
-let cocoTenderApi (storage:IStorage) =
+let cocoTenderApi (storage:IStorageApi) =
     {
-        //let getAllCost = getAllCost storage
-
         getBoQItems = fun () -> asyncResult {
             let! boqItems = storage.getBoQItems()
             let! allCost = getAllCost storage ()
