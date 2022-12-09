@@ -9,6 +9,7 @@ nuget Fsharp.Core ~> 6
 nuget Fable.Remoting.Giraffe
 nuget FsToolkit.ErrorHandling
 nuget jquery
+nuget LiteDB.FSharp
 nuget Saturn
 nuget Expecto
 
