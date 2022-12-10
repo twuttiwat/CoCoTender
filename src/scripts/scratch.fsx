@@ -30,7 +30,7 @@ let boqItem:BoQItem =
 boqitems.Insert boqItem
 boqitems.FindAll () |> List.ofSeq
 
-boqitems.FindById()
+//boqitems.FindById()
 
 // OR
 let id = BsonValue(Guid("92975f65-52fe-4089-b11e-524eb141577f"))
@@ -38,7 +38,7 @@ let id = BsonValue(Guid("92975f65-52fe-4089-b11e-524eb141577f"))
 let result = boqitems.FindById(id)
 
 
-let result = { result with Description = "Foo"}
-boqitems.Update(result)
+let result' = { result with Description = "Foo"}
+boqitems.Update(result')
 
 boqitems.Delete(id)
