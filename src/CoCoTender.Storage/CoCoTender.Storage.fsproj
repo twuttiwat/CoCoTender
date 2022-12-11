@@ -1,17 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="paket.references" />
-    <Compile Include="Server.fs" />
+    <Compile Include="Common.fs" />
+    <Compile Include="ResizeArray.fs" />
+    <Compile Include="LiteDB.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Shared\Shared.fsproj" />
     <ProjectReference Include="..\CoCoTender.Domain\CoCoTender.Domain.fsproj" />
-    <ProjectReference Include="..\CoCoTender.Storage\CoCoTender.Storage.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

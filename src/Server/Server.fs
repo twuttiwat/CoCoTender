@@ -6,93 +6,12 @@ open Fable.Remoting.Giraffe
 open Saturn
 
 open System
-open LiteDB.FSharp
-open LiteDB
 
 open Shared
 open CoCoTender.Domain
-open Project
-
-type IStorageApi =
-    abstract member getBoQItems : unit -> Result<BoQItem list,string>
-    abstract member addBoQItem : boqItem:BoQItem -> Result<unit, string>
-    abstract member updateBoQItem : boqItem:BoQItem -> Result<unit, string>
-    abstract member deleteBoQItem : itemId:Guid -> Result<Unit, string>
-    abstract member loadFactorFTable : unit -> FactorFTable
-
-type ResizeArrayStorage() =
-    let boqItems = ResizeArray<BoQItem>()
-    do
-        let qty = Quantity (10.0, "m^2")
-        let material = Material { Name = "Pool Tile"; Unit = "m^2"; UnitCost = 100.0 }
-        let labor = Labor { Name = "Do Tiling"; Unit = "m^2"; UnitCost = 50.0 }
-        let defaultItem = BoQItem.tryCreate (Guid.NewGuid()) "Pool Tile" qty material labor
-        match defaultItem with
-        | Ok defaultItem' ->
-            boqItems.Add defaultItem' |> ignore
-        | _ -> ()
-
-    interface IStorageApi with
-        member _.getBoQItems() =
-            boqItems |> List.ofSeq |> Ok
-
-        member _.addBoQItem(boqItem) =
-            boqItems.Add boqItem
-            Ok ()
-
-        member _.updateBoQItem(boqItem) =
-            let index = boqItems.FindIndex( fun x -> x = boqItem)
-            boqItems[index] <- boqItem
-            Ok ()
-
-        member _.deleteBoQItem(itemId) =
-            let index = boqItems.FindIndex( fun x -> x |> BoQItem.value |> fun y -> y.Id = itemId)
-            boqItems.RemoveAt(index)
-            Ok ()
-
-        member _.loadFactorFTable() =
-            FactorFTable [(10,1.1); (100,1.5); (1000, 1.9)]
-
-type FactorFRec = {
-    Id: int
-    DirectCost: float
-    FactorF: float
-}
-type LiteDBStorage () =
-
-    let database =
-        let mapper = FSharpBsonMapper()
-        let connStr = $"Filename=CoCoTender.db;mode=Exclusive"
-        new LiteDatabase (connStr, mapper)
-
-    let boqItems = database.GetCollection<BoQItem> "boqItems"
-    let factorFs = database.GetCollection<FactorFRec> "factorFs"
-
-    do
-        if factorFs.Count() = 0 then
-            factorFs.Insert { Id = 1; DirectCost = 10.0; FactorF = 1.1 } |> ignore
-            factorFs.Insert { Id = 2; DirectCost = 100.0; FactorF = 1.5 } |> ignore
-            factorFs.Insert { Id = 3; DirectCost = 1000.0; FactorF = 1.9 } |> ignore
-
-
-    interface IStorageApi with
-        member _.getBoQItems () =
-            boqItems.FindAll() |> List.ofSeq |> Ok
-
-        member _.addBoQItem(boqItem) =
-            boqItems.Insert boqItem |> ignore
-            Ok ()
-
-        member _.updateBoQItem(boqItem) =
-            if boqItems.Update boqItem then Ok ()
-            else Error "LiteDbStorage:Could not update boq item"
-
-        member _.deleteBoQItem(itemId) =
-            if boqItems.Delete itemId then Ok ()
-            else Error "LiteDbStorage:Could not delete boq item"
-
-        member _.loadFactorFTable () =
-            factorFs.FindAll() |> List.ofSeq |> List.map (fun x -> x.DirectCost,x.FactorF) |> FactorFTable
+open CoCoTender.Domain.Project
+open CoCoTender.Storage
+open CoCoTender.Storage.LiteDB
 
 module Dto =
     let toBoQItemDto (domain:BoQItem) =
@@ -127,7 +46,9 @@ let cocoTenderApi (storage:IStorageApi) =
     {
         getBoQItems = fun () -> asyncResult {
             let! boqItems = storage.getBoQItems()
+            printfn "Server boqitems %A" (boqItems |> List.length)
             let! allCost = getAllCost storage ()
+            printfn "Server allCost %A" allCost
 
             return (boqItems |> List.map Dto.toBoQItemDto), allCost
         }

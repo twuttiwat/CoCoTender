@@ -24,6 +24,7 @@ type Msg =
     | DeleteBoQItem of itemId:Guid
     | ToggleFactorFView
     | GotFactorFInfo of Result<FactorFInfo,string>
+    | GotError of exn
 
 let cocoTenderApi =
     Remoting.createApi ()
@@ -43,7 +44,7 @@ let init () : Model * Cmd<Msg> =
             FactorFInfo = []
         }
 
-    let cmdGetBoQItems = Cmd.OfAsync.perform cocoTenderApi.getBoQItems () GotBoQItems
+    let cmdGetBoQItems = Cmd.ofMsg GetBoQItems
     let cmdGetFactorFInfo = Cmd.OfAsync.perform cocoTenderApi.getFactorFInfo () GotFactorFInfo
 
     model, Cmd.batch [ cmdGetBoQItems; cmdGetFactorFInfo ]
@@ -56,8 +57,11 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     let showError' = showError model
 
     match msg with
+    | GotError ex ->
+        printfn "GotError %A" ex.Message
+        model, Cmd.none
     | GetBoQItems ->
-        let cmd = Cmd.OfAsync.perform cocoTenderApi.getBoQItems () GotBoQItems
+        let cmd = Cmd.OfAsync.either cocoTenderApi.getBoQItems () GotBoQItems GotError
         model, cmd
     | GotBoQItems (Ok (items,allCost)) ->
         { model with BoQItems = items; AllCost = allCost }, Cmd.none
