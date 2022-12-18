@@ -41,7 +41,9 @@ let navBrand =
     ]
 
 let containerBox (model: Model) (dispatch: Msg -> unit) =
-    Bulma.container []
+    Bulma.container [
+        Pages.Home.view()
+    ]
 
 let view (model: Model) (dispatch: Msg -> unit) =
     Bulma.hero [
@@ -60,10 +62,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
             Bulma.heroBody [
                 Bulma.container [
-                    Bulma.title [
-                        text.hasTextCentered
-                        prop.text model.PageName
-                    ]
                     containerBox model dispatch
                 ]
             ]
