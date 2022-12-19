@@ -12,38 +12,26 @@ type Model =
     {
         PageName : string
         CurrentPage : Page
-        CurrentUrl : string list
     }
 
 type Msg =
-    | UrlChanged of string list
+    | UrlChanged of Page
 
 let init () : Model * Cmd<Msg> =
+    let currentPage = Router.currentUrl() |> parseUrl
     let model =
         {
             PageName = "Index"
-            CurrentPage = Page.Home
-            CurrentUrl = Router.currentUrl()
+            CurrentPage = currentPage
         }
 
-    let currentPage =
-        match model.CurrentUrl with
-        | [] -> Home
-        | [ "boq" ] -> BoQ
-        | _ -> Home
-
-    { model with CurrentPage = currentPage }, Cmd.none
+    model, Cmd.none
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
-    | UrlChanged segments ->
-        printfn "UrlChanged %A" segments
-        let currentPage =
-            match segments with
-            | [] -> Home
-            | [ "boq" ] -> BoQ
-            | _ -> Home
-        { model with CurrentPage = currentPage } , Cmd.none
+    | UrlChanged page ->
+        printfn "UrlChanged %A" page
+        { model with CurrentPage = page } , Cmd.none
 
 open Feliz
 open Feliz.Router
@@ -76,6 +64,10 @@ let viewPage (model: Model) (dispatch: Msg -> unit) (pageContent:ReactElement) =
             ]
             Bulma.heroBody [
                 Bulma.container [
+                    Bulma.title [
+                        text.hasTextCentered
+                        prop.text "CoCoTender"
+                    ]
                     pageContent
                 ]
             ]
@@ -83,7 +75,7 @@ let viewPage (model: Model) (dispatch: Msg -> unit) (pageContent:ReactElement) =
     ]
 
 let view (model: Model) (dispatch: Msg -> unit) =
-    let activePage () =
+    let activePage =
         match model.CurrentPage with
         | Home -> Pages.Home.view()
         | BoQ -> Pages.BoQ.view()
@@ -91,6 +83,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
         |> viewPage model dispatch
 
     React.router [
-        router.onUrlChanged (UrlChanged >> dispatch)
-        router.children [ activePage() ]
+        router.onUrlChanged (parseUrl >> UrlChanged >> dispatch)
+        router.children [ activePage ]
     ]

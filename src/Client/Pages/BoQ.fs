@@ -267,30 +267,9 @@ open Feliz.UseElmish
 let view = React.functionComponent(fun () ->
     let (model: Model), dispatch = React.useElmish(init, update, [| |])
 
-    Bulma.hero [
-        hero.isFullHeight
-        color.isPrimary
-        prop.style [
-            style.backgroundSize "cover"
-            style.backgroundImageUrl "https://unsplash.it/1200/900?random"
-            style.backgroundPosition "no-repeat center center fixed"
-        ]
-        prop.children [
-            Bulma.heroHead [
-                Bulma.navbar [
-                    Bulma.container [ navBrand ]
-                ]
-            ]
-            Bulma.heroBody [
-                Bulma.container [
-                    Bulma.title [
-                        text.hasTextCentered
-                        prop.text "CoCoTender"
-                    ]
-                    containerBox model dispatch
-                    factorFView model dispatch
-                ]
-            ]
-        ]
+    Bulma.container [
+        containerBox model dispatch
+        factorFView model dispatch
     ]
+
 )
