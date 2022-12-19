@@ -262,7 +262,11 @@ let factorFView (model: Model) dispatch =
         ]
     ]
 
-let view (model: Model) (dispatch: Msg -> unit) =
+open Feliz.UseElmish
+
+let view = React.functionComponent(fun () ->
+    let (model: Model), dispatch = React.useElmish(init, update, [| |])
+
     Bulma.hero [
         hero.isFullHeight
         color.isPrimary
@@ -289,3 +293,4 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
         ]
     ]
+)

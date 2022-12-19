@@ -36,9 +36,11 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         model, Cmd.none
 
 open Feliz
-open Feliz.Bulma
+open Feliz.Router
 open Feliz.UseElmish
+open Feliz.Bulma
 open Feliz.AgGrid
+
 
 let projectsGrid model dispatch =
 
@@ -67,6 +69,16 @@ let projectsGrid model dispatch =
                         ColumnDef.headerName "Estimate Cost"
                         ColumnDef.valueGetter (fun x -> x.EstimateCost)
                         ColumnDef.width 75
+                    ]
+                    ColumnDef.create<Guid> [
+                        ColumnDef.valueGetter (fun x -> x.Id)
+                        ColumnDef.cellRendererFramework (fun id _ ->
+                            Html.a [
+                                prop.href (Router.format("boq"))
+                                prop.text "Edit"
+                                // prop.onClick (fun _ -> Router.navigatePath [| "boq"|] )
+                            ]
+                        )
                     ]
                 ]
             ]

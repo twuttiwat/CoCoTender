@@ -4,27 +4,51 @@ open System
 open Elmish
 open Fable.Remoting.Client
 open Elmish.Toastr
+open Feliz.Router
+open MyRouter
 open Shared
 
 type Model =
     {
         PageName : string
+        CurrentPage : Page
+        CurrentUrl : string list
     }
 
 type Msg =
-    | DoNothing
-
+    | UrlChanged of string list
 
 let init () : Model * Cmd<Msg> =
-    { PageName = "Index" }, Cmd.none
+    let model =
+        {
+            PageName = "Index"
+            CurrentPage = Page.Home
+            CurrentUrl = Router.currentUrl()
+        }
+
+    let currentPage =
+        match model.CurrentUrl with
+        | [] -> Home
+        | [ "boq" ] -> BoQ
+        | _ -> Home
+
+    { model with CurrentPage = currentPage }, Cmd.none
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
-    | DoNothing ->
-        model, Cmd.none
+    | UrlChanged segments ->
+        printfn "UrlChanged %A" segments
+        let currentPage =
+            match segments with
+            | [] -> Home
+            | [ "boq" ] -> BoQ
+            | _ -> Home
+        { model with CurrentPage = currentPage } , Cmd.none
 
 open Feliz
+open Feliz.Router
 open Feliz.Bulma
+
 
 let navBrand =
     Bulma.navbarBrand.div [
@@ -40,12 +64,7 @@ let navBrand =
         ]
     ]
 
-let containerBox (model: Model) (dispatch: Msg -> unit) =
-    Bulma.container [
-        Pages.Home.view()
-    ]
-
-let view (model: Model) (dispatch: Msg -> unit) =
+let viewPage (model: Model) (dispatch: Msg -> unit) (pageContent:ReactElement) =
     Bulma.hero [
         hero.isFullHeight
         color.isDark
@@ -57,8 +76,21 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
             Bulma.heroBody [
                 Bulma.container [
-                    containerBox model dispatch
+                    pageContent
                 ]
             ]
         ]
+    ]
+
+let view (model: Model) (dispatch: Msg -> unit) =
+    let activePage () =
+        match model.CurrentPage with
+        | Home -> Pages.Home.view()
+        | BoQ -> Pages.BoQ.view()
+
+        |> viewPage model dispatch
+
+    React.router [
+        router.onUrlChanged (UrlChanged >> dispatch)
+        router.children [ activePage() ]
     ]

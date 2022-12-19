@@ -5,6 +5,7 @@ storage: none
 nuget Elmish.Toastr
 nuget Feliz.AgGrid
 nuget Feliz.Bulma.QuickView
+nuget Feliz.Router
 nuget Feliz.UseElmish
 nuget Fsharp.Core ~> 6
 nuget Fable.Remoting.Giraffe
