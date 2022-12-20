@@ -473,3 +473,6 @@ release.cmd
 release.sh
 *.orig
 *.DotSettings.user
+
+# ignore LiteSharpDB file
+*.db
