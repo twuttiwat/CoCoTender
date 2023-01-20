@@ -5,7 +5,7 @@
 const CONFIG = {
     // The tags to include the generated JS and CSS will be automatically injected in the HTML template
     // See https://github.com/jantimon/html-webpack-plugin
-    indexHtmlTemplate: './src/Client/index.html',
+    indexHtmlTemplate: './src/Client/app.html',
     fsharpEntry: './src/Client/output/App.js',
     cssEntry: './src/Client/style.scss',
     outputDir: './deploy/public',
@@ -30,7 +30,7 @@ const CONFIG = {
 const TEST_CONFIG = {
     // The tags to include the generated JS and CSS will be automatically injected in the HTML template
     // See https://github.com/jantimon/html-webpack-plugin
-    indexHtmlTemplate: 'tests/Client/index.html',
+    indexHtmlTemplate: 'tests/Client/app.html',
     fsharpEntry: 'tests/Client/output/Client.Tests.js',
     outputDir: 'tests/Client',
     assetsDir: 'tests/Client',
@@ -100,7 +100,7 @@ module.exports = function(env, arg) {
             // PRODUCTION AND DEVELOPMENT
             // HtmlWebpackPlugin allows us to use a template for the index.html page
             // and automatically injects <script> or <link> tags for generated bundles.
-            new HtmlWebpackPlugin({ filename: 'index.html', template: resolve(config.indexHtmlTemplate)})
+            new HtmlWebpackPlugin({ filename: 'app.html', template: resolve(config.indexHtmlTemplate)})
         ].filter(Boolean),
         // Configuration for webpack-dev-server
         devServer: {
