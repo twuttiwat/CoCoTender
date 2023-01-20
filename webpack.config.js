@@ -15,7 +15,7 @@ const CONFIG = {
     // to a external API server. See https://webpack.js.org/configuration/dev-server/#devserver-proxy
     devServerProxy: {
         // redirect requests that start with /api/ to the server on port 5000
-        '/api/**': {
+        '**': {
             target: 'http://localhost:' + (process.env.SERVER_PROXY_PORT || '5000'),
             changeOrigin: true
         },
