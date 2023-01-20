@@ -4,6 +4,7 @@ open FsToolkit.ErrorHandling
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open Saturn
+open Giraffe
 
 open System
 
@@ -80,15 +81,19 @@ let cocoTenderApi (storage:IStorageApi) =
         getFactorFInfo = fun () -> asyncResult { return Project.getFactorFInfo storage.loadFactorFTable }
     }
 
-let webApp =
+let webApp:HttpHandler =
     Remoting.createApi ()
     |> Remoting.withRouteBuilder Route.builder
     |> Remoting.fromValue (cocoTenderApi (LiteDBStorage()))
     |> Remoting.buildHttpHandler
 
+let topRouter = router {
+    get "/" (htmlFile "public/app.html")
+}
+
 let app =
     application {
-        use_router webApp
+        use_router topRouter 
         memory_cache
         use_static "public"
         use_gzip
