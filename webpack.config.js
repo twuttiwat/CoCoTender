@@ -2,13 +2,16 @@
 // CONFIG is the configuration used to run the application.
 // TEST_CONFIG is the configuration used to run tests.
 // If you need better fine-tuning of Webpack options check the buildConfig function.
+
+var isProduction = !process.argv.find(v => v.indexOf('webpack-dev-server') !== -1);
+
 const CONFIG = {
     // The tags to include the generated JS and CSS will be automatically injected in the HTML template
     // See https://github.com/jantimon/html-webpack-plugin
     indexHtmlTemplate: './src/Client/app.html',
     fsharpEntry: './src/Client/output/App.js',
     cssEntry: './src/Client/style.scss',
-    outputDir: './deploy/public',
+    outputDir: isProduction ? './deploy/public' : './src/Server/public',    
     assetsDir: './src/Client/public',
     devServerPort: 8080,
     // When using webpack-dev-server, you may need to redirect some calls
@@ -108,6 +111,10 @@ module.exports = function(env, arg) {
                 directory: resolve(config.assetsDir),
                 publicPath: '/'
             },
+            devMiddleware: {
+                writeToDisk: true,
+            },
+
             host: '0.0.0.0',
             port: config.devServerPort,
             proxy: config.devServerProxy,

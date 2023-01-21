@@ -89,6 +89,7 @@ let webApp:HttpHandler =
 
 let topRouter = router {
     get "/" (htmlFile "public/app.html")
+    forward "/api" webApp
 }
 
 let app =
