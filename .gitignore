@@ -476,3 +476,6 @@ release.sh
 
 # ignore LiteSharpDB file
 *.db
+
+# ignore Server/public
+src/Server/public
