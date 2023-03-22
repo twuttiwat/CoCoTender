@@ -2,3 +2,4 @@ Fake.Core.Target
 Fake.IO.FileSystem
 Farmer
 LiteDB.FSharp
+Microsoft.IdentityModel.Tokens

@@ -10,6 +10,7 @@
     <None Include="paket.references" />
     <Compile Include="Pages\Home.fs" />
     <Compile Include="Pages\BoQ.fs" />
+    <Compile Include="Pages\Login.fs" />
     <Compile Include="Index.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>

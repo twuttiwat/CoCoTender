@@ -2,20 +2,23 @@
 // CONFIG is the configuration used to run the application.
 // TEST_CONFIG is the configuration used to run tests.
 // If you need better fine-tuning of Webpack options check the buildConfig function.
+
+var isProduction = !process.argv.find(v => v.indexOf('webpack-dev-server') !== -1);
+
 const CONFIG = {
     // The tags to include the generated JS and CSS will be automatically injected in the HTML template
     // See https://github.com/jantimon/html-webpack-plugin
-    indexHtmlTemplate: './src/Client/index.html',
+    indexHtmlTemplate: './src/Client/app.html',
     fsharpEntry: './src/Client/output/App.js',
     cssEntry: './src/Client/style.scss',
-    outputDir: './deploy/public',
+    outputDir: isProduction ? './deploy/public' : './src/Server/public',    
     assetsDir: './src/Client/public',
     devServerPort: 8080,
     // When using webpack-dev-server, you may need to redirect some calls
     // to a external API server. See https://webpack.js.org/configuration/dev-server/#devserver-proxy
     devServerProxy: {
         // redirect requests that start with /api/ to the server on port 5000
-        '/api/**': {
+        '**': {
             target: 'http://localhost:' + (process.env.SERVER_PROXY_PORT || '5000'),
             changeOrigin: true
         },
@@ -30,7 +33,7 @@ const CONFIG = {
 const TEST_CONFIG = {
     // The tags to include the generated JS and CSS will be automatically injected in the HTML template
     // See https://github.com/jantimon/html-webpack-plugin
-    indexHtmlTemplate: 'tests/Client/index.html',
+    indexHtmlTemplate: 'tests/Client/app.html',
     fsharpEntry: 'tests/Client/output/Client.Tests.js',
     outputDir: 'tests/Client',
     assetsDir: 'tests/Client',
@@ -100,7 +103,7 @@ module.exports = function(env, arg) {
             // PRODUCTION AND DEVELOPMENT
             // HtmlWebpackPlugin allows us to use a template for the index.html page
             // and automatically injects <script> or <link> tags for generated bundles.
-            new HtmlWebpackPlugin({ filename: 'index.html', template: resolve(config.indexHtmlTemplate)})
+            new HtmlWebpackPlugin({ filename: 'app.html', template: resolve(config.indexHtmlTemplate)})
         ].filter(Boolean),
         // Configuration for webpack-dev-server
         devServer: {
@@ -108,6 +111,10 @@ module.exports = function(env, arg) {
                 directory: resolve(config.assetsDir),
                 publicPath: '/'
             },
+            devMiddleware: {
+                writeToDisk: true,
+            },
+
             host: '0.0.0.0',
             port: config.devServerPort,
             proxy: config.devServerProxy,

@@ -7,6 +7,9 @@ open Helpers
 
 initializeContext()
 
+let serverPublicPath = Path.getFullName "src/Server/public"
+let clientPublicPath = Path.getFullName "src/Client/public"
+
 let sharedPath = Path.getFullName "src/Shared"
 let serverPath = Path.getFullName "src/Server"
 let clientPath = Path.getFullName "src/Client"
@@ -47,6 +50,7 @@ Target.create "Azure" (fun _ ->
 )
 
 Target.create "Run" (fun _ ->
+    // Shell.copyDir serverPublicPath clientPublicPath FileFilter.allFiles
     run dotnet "build" sharedPath
     [ "server", dotnet "watch run" serverPath
       "client", dotnet "fable watch -o output -s --run npm run start" clientPath ]
