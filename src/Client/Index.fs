@@ -10,7 +10,6 @@ open Shared
 
 type Model =
     {
-        PageName : string
         CurrentPage : Page
     }
 
@@ -21,7 +20,6 @@ let init () : Model * Cmd<Msg> =
     let currentPage = Router.currentUrl() |> parseUrl
     let model =
         {
-            PageName = "Index"
             CurrentPage = currentPage
         }
 
@@ -36,7 +34,6 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 open Feliz
 open Feliz.Router
 open Feliz.Bulma
-
 
 let navBrand =
     Bulma.navbarBrand.div [
@@ -77,6 +74,7 @@ let viewPage (model: Model) (dispatch: Msg -> unit) (pageContent:ReactElement) =
 let view (model: Model) (dispatch: Msg -> unit) =
     let activePage =
         match model.CurrentPage with
+        | Login -> Pages.Login.view()
         | Home -> Pages.Home.view()
         | BoQ -> Pages.BoQ.view()
 

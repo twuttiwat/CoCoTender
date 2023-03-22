@@ -5,6 +5,12 @@ open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open Saturn
 open Giraffe
+open System
+open System.Security.Claims
+open System.IdentityModel.Tokens.Jwt
+open Microsoft.IdentityModel.Tokens
+open Microsoft.AspNetCore.Http
+open Saturn
 
 open System
 
@@ -81,19 +87,58 @@ let cocoTenderApi (storage:IStorageApi) =
         getFactorFInfo = fun () -> asyncResult { return Project.getFactorFInfo storage.loadFactorFTable }
     }
 
-let webApp:HttpHandler =
+let secret = "my-top-secret-no-one-knows"
+let issuer = "my-domain-issuer.com"
+
+let generateToken email =
+    let claims = [|
+        Claim(JwtRegisteredClaimNames.Sub, email);
+        Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) |]
+
+    claims
+    |> Auth.generateJWT (secret, SecurityAlgorithms.HmacSha256) issuer (DateTime.UtcNow.AddHours(1.0))
+    |> Token
+    
+let authApi = {
+    login =
+        fun (email, password) ->
+            async {
+                if (password = "ok") then
+                    return (email |> generateToken |> Ok)
+                else 
+                    return (Error "Login Failed")
+            }
+}
+
+// let cocoTenderApi' context = cocoTenderApi context (LiteDBStorage())
+
+let anonymousApi : HttpHandler =
     Remoting.createApi ()
-    |> Remoting.withRouteBuilder Route.builder
-    |> Remoting.fromValue (cocoTenderApi (LiteDBStorage()))
+    |> Remoting.fromValue authApi
     |> Remoting.buildHttpHandler
 
+let securedApi  =
+    Remoting.createApi ()
+    |> Remoting.fromValue (cocoTenderApi (LiteDBStorage()))
+    |> Remoting.buildHttpHandler
+      
+let completeApi : HttpHandler = choose [
+    anonymousApi
+    pipeline {
+        requires_authentication (Giraffe.Auth.challenge "JWT")
+        plug securedApi
+    }
+]
+    
 let topRouter = router {
     get "/" (htmlFile "public/app.html")
-    forward "/api" webApp
+    forward "/api" completeApi
 }
+
 
 let app =
     application {
+        use_jwt_authentication secret issuer
         use_router topRouter 
         memory_cache
         use_static "public"

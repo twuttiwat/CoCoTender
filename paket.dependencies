@@ -12,6 +12,7 @@ nuget Fable.Remoting.Giraffe
 nuget FsToolkit.ErrorHandling
 nuget jquery
 nuget LiteDB.FSharp
+nuget Microsoft.IdentityModel.Tokens 6.25.1
 nuget Saturn
 nuget Expecto
 
@@ -30,3 +31,4 @@ nuget Fulma
 nuget Fake.Core.Target
 nuget Fake.IO.FileSystem
 nuget Farmer
+nuget System.IdentityModel.Tokens.Jwt 6.25.1

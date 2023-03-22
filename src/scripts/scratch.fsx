@@ -1,44 +1,18 @@
-#r "nuget:LiteDB.FSharp"
-#r "nuget:FsToolkit.ErrorHandling"
-#r @"C:\projs\CoCoTender\src\CoCoTender.Domain\bin\Debug\net6.0\CoCoTender.Domain.dll"
-
-open LiteDB.FSharp
-open LiteDB
-open LiteDB.FSharp.Extensions
-open CoCoTender.Domain
-
-let database =
-      let mapper = FSharpBsonMapper()
-      let connStr = $"Filename={__SOURCE_DIRECTORY__}\\CoCoTender.db;mode=Exclusive"
-      new LiteDatabase (connStr, mapper)
-
-let boqitems = database.GetCollection<BoQItem> "boqitems"
+#r "nuget: System.IdentityModel.Tokens.Jwt, 6.25.1"
+#r "nuget: Saturn, 0.16.1"
 
 open System
+open System.Security.Claims
+open System.IdentityModel.Tokens.Jwt
+open Microsoft.IdentityModel.Tokens
+open Saturn
 
-let itemId = Guid.NewGuid()
-let desc = "Pool Item"
-let qty = Quantity (10.0, "m^2")
-let material = Material { Name = "Big Tile"; UnitCost = 100.0; Unit = "m^2" }
-let labor = Labor { Name = "Do Tiling"; UnitCost = 50.0; Unit = "m^2" }
-let boqItem:BoQItem =
-      match BoQItem.tryCreate itemId desc qty material labor with
-      | Ok value -> value
-      | Error e -> failwith e
+let secret = "my-top-secret-no-one-knows"
+let issuer = "my-domain-issuer.com"
 
-
-boqitems.Insert boqItem
-boqitems.FindAll () |> List.ofSeq
-
-//boqitems.FindById()
-
-// OR
-let id = BsonValue(Guid("92975f65-52fe-4089-b11e-524eb141577f"))
-// result : Album
-let result = boqitems.FindById(id)
-
-
-let result' = { result with Description = "Foo"}
-boqitems.Update(result')
-
-boqitems.Delete(id)
+let generateToken email =
+      let claims = [|
+          Claim(JwtRegisteredClaimNames.Sub, email);
+          Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) |]
+      claims
+      |> Auth.generateJWT (secret, SecurityAlgorithms.HmacSha256) issuer (DateTime.UtcNow.AddHours(1.0))

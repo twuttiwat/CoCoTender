@@ -54,6 +54,11 @@ type ICoCoTenderApi = {
     getFactorFInfo: unit->Async<Result<FactorFInfo,string>>
 }
 
+type Token = Token of string
+
+type IAuthApi =
+    { login: string*string -> Async<Result<Token,string>> }
+
 module Route =
     let builder typeName methodName =
         sprintf "/api/%s/%s" typeName methodName

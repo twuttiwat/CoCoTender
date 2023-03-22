@@ -1,10 +1,12 @@
 module MyRouter
 
 type Page =
+    | Login
     | Home
     | BoQ
 
 let parseUrl = function
-    | [ ] -> Home
+    | [ ] -> Login
     | [ "boq" ] -> BoQ
-    | _ -> Home
+    | [ "login" ] -> Login
+    | _ -> Login
