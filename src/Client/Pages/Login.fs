@@ -5,10 +5,10 @@ open Fable.Remoting.Client
 open Shared
 open Feliz.Router
 
-type Model = 
-    { 
+type Model =
+    {
         Email : string
-        Password : string 
+        Password : string
     }
 
 type Msg =
@@ -20,14 +20,14 @@ type Msg =
 
 let authApi =
     Remoting.createApi ()
-    |> Remoting.withRouteBuilder Route.builder 
+    |> Remoting.withRouteBuilder Route.builder
     |> Remoting.buildProxy<IAuthApi>
 
 let init () : Model * Cmd<Msg> =
-    let model = 
-        { 
+    let model =
+        {
             Email = "foo@bar.com"
-            Password = "ok" 
+            Password = "ok"
         }
 
     model, Cmd.none
@@ -48,15 +48,15 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | Login ->
         printf "Loggin In"
         let cmd = Cmd.OfAsync.either authApi.login (model.Email, model.Password) LoggedIn GotError
-        model, cmd 
+        model, cmd
 
     | LoggedIn (Ok (Token token)) ->
         printf $"Token {token}"
-        // TokenStorage.setToken token
-        // let cmd = Cmd.navigatePath( [|"secured"|])
-        model, Cmd.none
+        TokenStorage.setToken token
+        let cmd = Cmd.navigatePath( [|"secured"|])
+        model, cmd
 
-    | LoggedIn (Error msg) -> 
+    | LoggedIn (Error msg) ->
         showError' msg
         model, Cmd.none
 
