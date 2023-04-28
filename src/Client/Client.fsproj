@@ -6,8 +6,9 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="index.html" />
-    <Compile Include="Router.fs" />
     <None Include="paket.references" />
+    <Compile Include="TokenStorage.fs" />
+    <Compile Include="Router.fs" />
     <Compile Include="Pages\Home.fs" />
     <Compile Include="Pages\BoQ.fs" />
     <Compile Include="Pages\Login.fs" />

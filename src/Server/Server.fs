@@ -98,19 +98,24 @@ let generateToken email =
     claims
     |> Auth.generateJWT (secret, SecurityAlgorithms.HmacSha256) issuer (DateTime.UtcNow.AddHours(1.0))
     |> Token
-    
+
 let authApi = {
     login =
         fun (email, password) ->
             async {
                 if (password = "ok") then
                     return (email |> generateToken |> Ok)
-                else 
+                else
                     return (Error "Login Failed")
             }
 }
 
 // let cocoTenderApi' context = cocoTenderApi context (LiteDBStorage())
+
+let securedRouter = router {
+    pipe_through (Auth.requireAuthentication JWT)
+    not_found_handler (setStatusCode 404 >=> text "Api 404")
+}
 
 let anonymousApi : HttpHandler =
     Remoting.createApi ()
@@ -121,7 +126,7 @@ let securedApi  =
     Remoting.createApi ()
     |> Remoting.fromValue (cocoTenderApi (LiteDBStorage()))
     |> Remoting.buildHttpHandler
-      
+
 let completeApi : HttpHandler = choose [
     anonymousApi
     pipeline {
@@ -129,9 +134,10 @@ let completeApi : HttpHandler = choose [
         plug securedApi
     }
 ]
-    
+
 let topRouter = router {
     get "/" (htmlFile "public/app.html")
+    forward "/secured" securedRouter
     forward "/api" completeApi
 }
 
@@ -139,7 +145,7 @@ let topRouter = router {
 let app =
     application {
         use_jwt_authentication secret issuer
-        use_router topRouter 
+        use_router topRouter
         memory_cache
         use_static "public"
         use_gzip

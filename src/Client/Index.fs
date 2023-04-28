@@ -81,6 +81,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         |> viewPage model dispatch
 
     React.router [
+        router.pathMode
         router.onUrlChanged (parseUrl >> UrlChanged >> dispatch)
         router.children [ activePage ]
     ]

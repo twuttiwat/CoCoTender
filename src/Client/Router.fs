@@ -7,6 +7,7 @@ type Page =
 
 let parseUrl = function
     | [ ] -> Login
+    | [ "secured" ] -> Home
     | [ "boq" ] -> BoQ
     | [ "login" ] -> Login
     | _ -> Login
